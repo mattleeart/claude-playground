@@ -216,6 +216,15 @@ button { font: inherit; }
   padding: 20px max(16px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
   max-width: 760px; margin: 0 auto;
 }
+.doc-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin: .2em 0 1.4em; font-size: .82rem; color: var(--muted);
+}
+.doc-meta .dot-sep { opacity: .5; }
+.doc-meta .tag {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 1px 8px; color: var(--accent);
+}
 .placeholder { color: var(--muted); }
 
 /* ---------- Markdown typography (mobile-first) ---------- */

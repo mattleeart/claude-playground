@@ -195,6 +195,64 @@ function initViewer() {
     }],
   });
 
+  // ^superscript^ and ~subscript~ (pandoc-style, no spaces inside)
+  marked.use({
+    extensions: [
+      {
+        name: "sup", level: "inline",
+        start(src) { const i = src.indexOf("^"); return i < 0 ? undefined : i; },
+        tokenizer(src) { const m = /^\^([^\^\s]+)\^/.exec(src); if (m) return { type: "sup", raw: m[0], text: m[1] }; },
+        renderer(t) { return "<sup>" + escapeHtml(t.text) + "</sup>"; },
+      },
+      {
+        name: "sub", level: "inline",
+        start(src) { const i = src.indexOf("~"); return i < 0 ? undefined : i; },
+        tokenizer(src) { const m = /^~(?!~)([^~\s]+)~/.exec(src); if (m) return { type: "sub", raw: m[0], text: m[1] }; },
+        renderer(t) { return "<sub>" + escapeHtml(t.text) + "</sub>"; },
+      },
+    ],
+  });
+
+  /* ---- YAML-ish frontmatter ---- */
+  function parseFrontmatter(text) {
+    const m = /^﻿?---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+    if (!m) return { meta: {}, body: text };
+    const meta = {};
+    m[1].split(/\r?\n/).forEach((line) => {
+      const mm = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+      if (!mm) return;
+      let v = mm[2].trim().replace(/^["']|["']$/g, "");
+      if (/^\[.*\]$/.test(v)) v = v.slice(1, -1).split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+      meta[mm[1].toLowerCase()] = v;
+    });
+    return { meta, body: text.slice(m[0].length) };
+  }
+
+  function readingStats(body) {
+    const cjk = (body.match(/[　-鿿가-힣]/g) || []).length;
+    const words = (body.replace(/[　-鿿가-힣]/g, " ").match(/\b[\w'-]+\b/g) || []).length;
+    const minutes = Math.max(1, Math.round(cjk / 500 + words / 220));
+    return { minutes, words: words + cjk };
+  }
+
+  function metaHeader(meta, body) {
+    const bits = [];
+    if (meta.date) bits.push(`<span>📅 ${escapeHtml(meta.date)}</span>`);
+    const tags = Array.isArray(meta.tags) ? meta.tags : (meta.tags ? [meta.tags] : []);
+    if (tags.length) bits.push(`<span class="tags">${tags.map((t) => `<span class="tag">#${escapeHtml(t)}</span>`).join(" ")}</span>`);
+    const st = readingStats(body);
+    bits.push(`<span>⏱️ 약 ${st.minutes}분</span>`);
+    return `<div class="doc-meta">${bits.join('<span class="dot-sep">·</span>')}</div>`;
+  }
+  function insertMeta(root, meta, body) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = DOMPurify.sanitize(metaHeader(meta, body));
+    const node = tmp.firstChild;
+    if (!node) return;
+    const h1 = root.querySelector(":scope > h1");
+    if (h1) h1.after(node); else root.prepend(node);
+  }
+
   /* ---- emoji shortcodes (lazy) ---- */
   let emojiReady = null, emojiMap = null;
   function loadEmoji() {
@@ -738,11 +796,15 @@ function initViewer() {
     try {
       const res = await fetch(file.path, { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
-      let text = await res.text();
+      const raw = await res.text();
+      const { meta, body } = parseFrontmatter(raw);
+      if (meta.title) titleEl.textContent = meta.title;
+      let text = body;
       if (/\$\$?[^\s$]/.test(text)) { try { await loadKatex(); } catch (_) {} }
       if (/:[a-z0-9_+-]+:/i.test(text)) { try { await loadEmoji(); } catch (_) {} }
       text = preprocessFootnotes(text);
       render(marked.parse(text));
+      insertMeta(content, meta, body);
       buildToc();
       if (pendingSearch) {
         highlightMatches(content, pendingSearch);
