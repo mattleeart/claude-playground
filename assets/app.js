@@ -675,6 +675,12 @@ function reveal() {
   initViewer();
 }
 
+if ("serviceWorker" in navigator) {
+  const reg = () => navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (document.readyState === "complete") reg();
+  else window.addEventListener("load", reg);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   let unlocked = false;
   try { unlocked = sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) {}
