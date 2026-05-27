@@ -21,6 +21,7 @@ const FULL = process.env.FULL !== "0";
 
   const browser = await chromium.launch();
   const context = await browser.newContext({
+    ignoreHTTPSErrors: true, // test env sits behind a TLS-intercepting proxy
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     isMobile: true,

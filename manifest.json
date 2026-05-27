@@ -25,6 +25,12 @@
       "size": 1412
     },
     {
+      "name": "images.md",
+      "path": "content/images.md",
+      "title": "이미지 표시",
+      "size": 874
+    },
+    {
       "name": "markdown-guide.md",
       "path": "content/markdown-guide.md",
       "title": "마크다운 가이드",

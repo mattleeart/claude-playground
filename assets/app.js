@@ -230,6 +230,40 @@ function initViewer() {
     renderMermaid(root);
     addCopyButtons(root);
     highlightCode(root);
+    setupImages(root);
+  }
+
+  function setupImages(root) {
+    root.querySelectorAll("img").forEach((img) => {
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.addEventListener("click", () => openLightbox(img));
+      img.addEventListener("error", () => { img.alt = (img.alt || "이미지") + " (불러오기 실패)"; img.classList.add("img-broken"); });
+      // wrap a standalone image in <figure> with caption from alt text
+      const p = img.parentElement;
+      if (p && p.tagName === "P" && p.childNodes.length === 1 && img.alt) {
+        const fig = document.createElement("figure");
+        const cap = document.createElement("figcaption");
+        cap.textContent = img.alt;
+        p.replaceWith(fig);
+        fig.appendChild(img);
+        fig.appendChild(cap);
+      }
+    });
+  }
+
+  let lightbox = null;
+  function openLightbox(img) {
+    if (!lightbox) {
+      lightbox = document.createElement("div");
+      lightbox.className = "lightbox";
+      lightbox.innerHTML = '<img alt="" /><button class="lightbox-close" aria-label="닫기">✕</button>';
+      lightbox.addEventListener("click", () => lightbox.classList.remove("open"));
+      document.body.appendChild(lightbox);
+    }
+    lightbox.querySelector("img").src = img.currentSrc || img.src;
+    lightbox.querySelector("img").alt = img.alt || "";
+    lightbox.classList.add("open");
   }
 
   let mermaidReady = null;
