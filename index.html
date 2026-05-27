@@ -2,58 +2,47 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simple Web Server</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #1e3a8a, #6d28d9);
-      color: #f8fafc;
-    }
-    .card {
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(8px);
-      padding: 2.5rem 3rem;
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-      text-align: center;
-      max-width: 90vw;
-    }
-    h1 { margin: 0 0 0.5rem; font-size: 1.8rem; }
-    p { margin: 0.25rem 0; opacity: 0.85; }
-    code {
-      background: rgba(255, 255, 255, 0.12);
-      padding: 0.15rem 0.4rem;
-      border-radius: 6px;
-      font-size: 0.95rem;
-    }
-    .dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #22c55e;
-      margin-right: 6px;
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Markdown Viewer</title>
+  <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-  <div class="card">
-    <h1><span class="dot"></span>접속 성공</h1>
-    <p>간단한 웹 페이지에 성공적으로 접속했습니다.</p>
-    <p>로컬 실행 시: <code>python3 server.py</code> (<code>/health</code> 제공)</p>
+  <!-- Lock screen -->
+  <section id="lock" class="lock" aria-label="패턴 잠금 화면">
+    <div class="lock-inner">
+      <div class="lock-icon">🔒</div>
+      <h1 class="lock-title">패턴을 그려 잠금 해제</h1>
+      <p id="lock-hint" class="lock-hint">9개의 점을 이어 패턴을 입력하세요</p>
+      <div id="pattern" class="pattern" role="application" aria-label="패턴 입력">
+        <svg id="pattern-lines" class="pattern-lines" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="pattern-dots" id="pattern-dots"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- App -->
+  <div id="app" class="app" hidden>
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="목록 열기">☰</button>
+      <h1 id="doc-title" class="topbar-title">문서</h1>
+      <button id="lock-btn" class="icon-btn" aria-label="잠그기">🔒</button>
+    </header>
+
+    <div id="backdrop" class="backdrop" hidden></div>
+
+    <nav id="drawer" class="drawer" aria-label="문서 목록">
+      <div class="drawer-head">문서 목록</div>
+      <ul id="file-list" class="file-list"></ul>
+    </nav>
+
+    <main id="content" class="content markdown-body">
+      <p class="placeholder">문서를 불러오는 중…</p>
+    </main>
   </div>
+
+  <script src="assets/marked.min.js"></script>
+  <script src="assets/purify.min.js"></script>
+  <script src="assets/app.js"></script>
 </body>
 </html>
