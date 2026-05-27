@@ -13,6 +13,12 @@
       "size": 1725
     },
     {
+      "name": "diagrams.md",
+      "path": "content/diagrams.md",
+      "title": "Mermaid 다이어그램",
+      "size": 1356
+    },
+    {
       "name": "gfm-kitchen-sink.md",
       "path": "content/gfm-kitchen-sink.md",
       "title": "GFM 종합 샘플",

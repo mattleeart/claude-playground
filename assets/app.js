@@ -181,8 +181,36 @@ function initViewer() {
 
   function enhance(root) {
     transformCallouts(root);
+    renderMermaid(root);
     addCopyButtons(root);
     highlightCode(root);
+  }
+
+  let mermaidReady = null;
+  function renderMermaid(root) {
+    const blocks = Array.from(root.querySelectorAll("pre > code")).filter(
+      (c) => /language-mermaid/.test(c.className || "")
+    );
+    if (!blocks.length) return;
+    const nodes = [];
+    blocks.forEach((code) => {
+      const div = document.createElement("div");
+      div.className = "mermaid";
+      div.textContent = code.textContent;
+      code.parentElement.replaceWith(div);
+      nodes.push(div);
+    });
+    if (!mermaidReady) {
+      mermaidReady = loadScript("assets/vendor/mermaid.min.js").then(() => {
+        window.mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: prefersDark() ? "dark" : "default",
+        });
+      });
+    }
+    mermaidReady.then(() => window.mermaid.run({ nodes, suppressErrors: true }))
+      .catch(() => { nodes.forEach((n) => (n.textContent = "다이어그램을 불러오지 못했습니다.")); });
   }
 
   /* GitHub-style admonitions: blockquote starting with [!NOTE] etc. */
