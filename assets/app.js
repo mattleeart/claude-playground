@@ -175,8 +175,54 @@ function initViewer() {
   });
 
   function render(html) {
-    content.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ["target"] });
+    content.innerHTML = DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true, svg: true, mathMl: true },
+      ADD_ATTR: ["target"],
+    });
     enhance(content);
+  }
+
+  /* ---- KaTeX (lazy) via marked extension ---- */
+  let katexReady = null;
+  let katexExtRegistered = false;
+  function loadKatex() {
+    if (!katexReady) {
+      loadStyle("assets/vendor/katex/katex.min.css");
+      katexReady = loadScript("assets/vendor/katex/katex.min.js").then(registerKatexExt);
+    }
+    return katexReady;
+  }
+  function registerKatexExt() {
+    if (katexExtRegistered || !window.katex) return;
+    katexExtRegistered = true;
+    const k = window.katex;
+    const render = (text, display) => {
+      try { return k.renderToString(text, { displayMode: display, throwOnError: false }); }
+      catch (e) { return "<code>" + escapeHtml(text) + "</code>"; }
+    };
+    // Block math: $$ on its own line(s). Inline math: $...$ on a single line.
+    const blockRule = /^\$\$\s*\n?([\s\S]+?)\n?\s*\$\$(?:\n|$)/;
+    const inlineRule = /^\$(?![\s$])((?:\\.|[^\\$\n])+?)(?<!\s)\$/;
+    marked.use({
+      extensions: [
+        {
+          name: "blockKatex", level: "block",
+          start(src) {
+            if (src.startsWith("$$")) return 0;
+            const i = src.indexOf("\n$$");
+            return i < 0 ? undefined : i + 1;
+          },
+          tokenizer(src) { const m = blockRule.exec(src); if (m) return { type: "blockKatex", raw: m[0], text: m[1].trim() }; },
+          renderer(t) { return render(t.text, true); },
+        },
+        {
+          name: "inlineKatex", level: "inline",
+          start(src) { const i = src.indexOf("$"); return i < 0 ? undefined : i; },
+          tokenizer(src) { const m = inlineRule.exec(src); if (m) return { type: "inlineKatex", raw: m[0], text: m[1].trim() }; },
+          renderer(t) { return render(t.text, false); },
+        },
+      ],
+    });
   }
 
   function enhance(root) {
@@ -292,6 +338,7 @@ function initViewer() {
       const res = await fetch(file.path, { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
       const text = await res.text();
+      if (/\$\$?[^\s$]/.test(text)) { try { await loadKatex(); } catch (_) {} }
       render(marked.parse(text));
       content.scrollIntoView({ block: "start" });
       window.scrollTo(0, 0);

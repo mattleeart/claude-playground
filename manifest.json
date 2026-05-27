@@ -31,6 +31,12 @@
       "size": 459
     },
     {
+      "name": "math.md",
+      "path": "content/math.md",
+      "title": "수학 수식 (KaTeX)",
+      "size": 907
+    },
+    {
       "name": "welcome.md",
       "path": "content/welcome.md",
       "title": "환영합니다 👋",
