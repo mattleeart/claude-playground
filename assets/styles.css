@@ -180,6 +180,10 @@ button { font: inherit; }
 .toc a.h3 { padding-left: 26px; font-size: .85rem; }
 .toc a.active { color: var(--accent); font-weight: 600; }
 
+.file-list .no-hit { color: var(--muted); padding: 12px; font-size: .9rem; }
+.file-sub mark { background: #fde68a; color: #1f2933; border-radius: 2px; padding: 0 1px; }
+.markdown-body mark.search-hit { background: #fca5a5; color: #1f2933; }
+
 .drawer {
   position: fixed; z-index: 40;
   top: 0; left: 0; bottom: 0;

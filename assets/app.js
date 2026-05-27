@@ -289,15 +289,101 @@ function initViewer() {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") syncHljsTheme(); });
   }
 
-  /* ---- document filter ---- */
+  /* ---- search: title + full text ---- */
   const filter = document.getElementById("filter");
-  filter.addEventListener("input", () => {
-    const q = filter.value.trim().toLowerCase();
-    Array.from(list.children).forEach((li) => {
-      const hit = !q || li.textContent.toLowerCase().includes(q);
-      li.style.display = hit ? "" : "none";
+  const searchResults = document.getElementById("search-results");
+  const tocHeadEl = () => document.getElementById("toc-head");
+  const docText = {};
+  let allDocsPromise = null;
+  let pendingSearch = null;
+
+  function ensureAllDocs() {
+    if (!allDocsPromise) {
+      allDocsPromise = Promise.all(files.map((f) =>
+        fetch(f.path, { cache: "force-cache" }).then((r) => r.text())
+          .then((t) => { docText[f.name] = t; }).catch(() => { docText[f.name] = ""; })
+      ));
+    }
+    return allDocsPromise;
+  }
+  function showLists(normal) {
+    list.hidden = !normal;
+    searchResults.hidden = normal;
+    const th = tocHeadEl(); if (th) th.hidden = !normal || th.dataset.empty === "1";
+    tocEl.hidden = !normal;
+  }
+  function snippet(text, q) {
+    const i = text.toLowerCase().indexOf(q.toLowerCase());
+    if (i < 0) return "";
+    const start = Math.max(0, i - 30), end = Math.min(text.length, i + q.length + 50);
+    const pre = (start > 0 ? "…" : "") + text.slice(start, i);
+    const hit = text.slice(i, i + q.length);
+    const post = text.slice(i + q.length, end) + (end < text.length ? "…" : "");
+    return escapeHtml(pre) + "<mark>" + escapeHtml(hit) + "</mark>" + escapeHtml(post);
+  }
+  function renderSearch(q) {
+    const ql = q.toLowerCase();
+    searchResults.innerHTML = "";
+    let count = 0;
+    files.forEach((f) => {
+      const inTitle = (f.title || f.name).toLowerCase().includes(ql);
+      const text = docText[f.name] || "";
+      const inBody = text.toLowerCase().includes(ql);
+      if (!inTitle && !inBody) return;
+      count++;
+      const li = document.createElement("li");
+      li.dataset.name = f.name;
+      const snip = inBody ? snippet(text, q) : escapeHtml(f.name);
+      li.innerHTML = `${escapeHtml(f.title || f.name)}<span class="file-sub">${snip}</span>`;
+      li.addEventListener("click", () => { pendingSearch = q; openFile(f.name); });
+      searchResults.appendChild(li);
     });
+    if (!count) searchResults.innerHTML = '<li class="no-hit">검색 결과가 없습니다</li>';
+  }
+  let searchTimer = 0;
+  filter.addEventListener("input", () => {
+    const q = filter.value.trim();
+    clearTimeout(searchTimer);
+    if (q.length < 1) { showLists(true); return; }
+    searchTimer = setTimeout(async () => {
+      showLists(false);
+      await ensureAllDocs();
+      renderSearch(q);
+    }, 180);
   });
+
+  function highlightMatches(root, q) {
+    if (!q) return;
+    const ql = q.toLowerCase();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.nodeValue || !n.nodeValue.toLowerCase().includes(ql)) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p || /^(SCRIPT|STYLE|CODE|PRE)$/.test(p.tagName) || p.closest(".katex, .mermaid")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const targets = [];
+    let n; while ((n = walker.nextNode())) targets.push(n);
+    let first = null;
+    targets.forEach((node) => {
+      const frag = document.createDocumentFragment();
+      const val = node.nodeValue;
+      let idx = 0, lo = val.toLowerCase(), pos;
+      while ((pos = lo.indexOf(ql, idx)) >= 0) {
+        if (pos > idx) frag.appendChild(document.createTextNode(val.slice(idx, pos)));
+        const mk = document.createElement("mark");
+        mk.className = "search-hit";
+        mk.textContent = val.slice(pos, pos + q.length);
+        frag.appendChild(mk);
+        if (!first) first = mk;
+        idx = pos + q.length;
+      }
+      if (idx < val.length) frag.appendChild(document.createTextNode(val.slice(idx)));
+      node.parentNode.replaceChild(frag, node);
+    });
+    if (first) setTimeout(() => first.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  }
 
   /* ---- reading progress, hide-on-scroll header, back-to-top ---- */
   const progress = document.getElementById("progress");
@@ -386,7 +472,8 @@ function initViewer() {
     tocEl.innerHTML = "";
     if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
     const heads = Array.from(content.querySelectorAll("h2, h3"));
-    if (!heads.length) { tocHead.hidden = true; return; }
+    if (!heads.length) { tocHead.hidden = true; tocHead.dataset.empty = "1"; return; }
+    tocHead.dataset.empty = "0";
     tocHead.hidden = false;
     const seen = {};
     const linkById = {};
@@ -637,10 +724,15 @@ function initViewer() {
       text = preprocessFootnotes(text);
       render(marked.parse(text));
       buildToc();
-      const saved = parseInt(lsGet(POS_PREFIX + file.name, "0"), 10) || 0;
-      window.scrollTo(0, saved);
-      setTimeout(() => window.scrollTo(0, saved), 60);
-      setTimeout(() => window.scrollTo(0, saved), 350);
+      if (pendingSearch) {
+        highlightMatches(content, pendingSearch);
+        pendingSearch = null;
+      } else {
+        const saved = parseInt(lsGet(POS_PREFIX + file.name, "0"), 10) || 0;
+        window.scrollTo(0, saved);
+        setTimeout(() => window.scrollTo(0, saved), 60);
+        setTimeout(() => window.scrollTo(0, saved), 350);
+      }
     } catch (e) {
       content.innerHTML = '<p class="placeholder">문서를 불러오지 못했습니다.</p>';
       tocHead.hidden = true; tocEl.innerHTML = "";
