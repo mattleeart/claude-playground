@@ -26,14 +26,38 @@
     <header class="topbar">
       <button id="menu-btn" class="icon-btn" aria-label="목록 열기">☰</button>
       <h1 id="doc-title" class="topbar-title">문서</h1>
+      <button id="settings-btn" class="icon-btn" aria-label="설정">⚙️</button>
       <button id="lock-btn" class="icon-btn" aria-label="잠그기">🔒</button>
+      <div id="progress" class="progress"></div>
     </header>
+
+    <div id="settings" class="settings-panel" hidden>
+      <div class="settings-row">
+        <span class="settings-label">테마</span>
+        <div class="seg" id="theme-seg">
+          <button data-theme-val="auto" class="seg-btn">자동</button>
+          <button data-theme-val="light" class="seg-btn">밝게</button>
+          <button data-theme-val="dark" class="seg-btn">어둡게</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">글자 크기</span>
+        <div class="seg">
+          <button id="font-dec" class="seg-btn">A−</button>
+          <button id="font-reset" class="seg-btn">기본</button>
+          <button id="font-inc" class="seg-btn">A+</button>
+        </div>
+      </div>
+    </div>
 
     <div id="backdrop" class="backdrop" hidden></div>
 
     <nav id="drawer" class="drawer" aria-label="문서 목록">
       <div class="drawer-head">문서 목록</div>
+      <input id="filter" class="filter" type="search" placeholder="문서 검색…" aria-label="문서 검색" />
       <ul id="file-list" class="file-list"></ul>
+      <div id="toc-head" class="drawer-head" hidden>목차</div>
+      <ul id="toc" class="toc"></ul>
     </nav>
 
     <main id="content" class="content markdown-body">

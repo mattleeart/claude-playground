@@ -6,6 +6,26 @@
 const AUTH = { salt: "074566f4abd1ce3f6696046e6d584f2a", iterations: 150000, hash: "21062b9f1e596f6480a1402da018ab1edb36f9bb64a3b60137716fb5886d0a5d" };
 
 const SESSION_KEY = "mdv_unlocked";
+const THEME_KEY = "mdv_theme", SCALE_KEY = "mdv_scale", LAST_KEY = "mdv_last", POS_PREFIX = "mdv_pos_";
+
+/* ---------------- settings (theme + font) ---------------- */
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+function getTheme() { return lsGet(THEME_KEY, "auto"); }
+function applyTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+}
+function getScale() { return Math.min(1.6, Math.max(0.8, parseFloat(lsGet(SCALE_KEY, "1")) || 1)); }
+function applyScale(s) { document.documentElement.style.setProperty("--md-scale", String(s)); }
+function effectiveDark() {
+  const t = document.documentElement.getAttribute("data-theme");
+  if (t === "dark") return true;
+  if (t === "light") return false;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+applyTheme(getTheme());
+applyScale(getScale());
 
 /* ---------------- crypto helpers ---------------- */
 function hexToBytes(hex) {
@@ -174,6 +194,109 @@ function initViewer() {
     location.reload();
   });
 
+  /* ---- settings panel: theme + font size ---- */
+  const settingsBtn = document.getElementById("settings-btn");
+  const settings = document.getElementById("settings");
+  const themeSeg = document.getElementById("theme-seg");
+  settingsBtn.addEventListener("click", (e) => { e.stopPropagation(); settings.hidden = !settings.hidden; });
+  document.addEventListener("click", (e) => {
+    if (!settings.hidden && !settings.contains(e.target) && e.target !== settingsBtn) settings.hidden = true;
+  });
+  function refreshThemeSeg() {
+    const t = getTheme();
+    themeSeg.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.themeVal === t));
+  }
+  themeSeg.querySelectorAll(".seg-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      const t = b.dataset.themeVal;
+      lsSet(THEME_KEY, t); applyTheme(t); refreshThemeSeg(); syncHljsTheme();
+    });
+  });
+  refreshThemeSeg();
+  function setScale(s) {
+    s = Math.min(1.6, Math.max(0.8, Math.round(s * 100) / 100));
+    lsSet(SCALE_KEY, String(s)); applyScale(s);
+  }
+  document.getElementById("font-dec").addEventListener("click", () => setScale(getScale() - 0.1));
+  document.getElementById("font-inc").addEventListener("click", () => setScale(getScale() + 0.1));
+  document.getElementById("font-reset").addEventListener("click", () => setScale(1));
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") syncHljsTheme(); });
+  }
+
+  /* ---- document filter ---- */
+  const filter = document.getElementById("filter");
+  filter.addEventListener("input", () => {
+    const q = filter.value.trim().toLowerCase();
+    Array.from(list.children).forEach((li) => {
+      const hit = !q || li.textContent.toLowerCase().includes(q);
+      li.style.display = hit ? "" : "none";
+    });
+  });
+
+  /* ---- reading progress bar ---- */
+  const progress = document.getElementById("progress");
+  function onScroll() {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    saveScrollSoon();
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  /* ---- TOC + scroll memory ---- */
+  const tocEl = document.getElementById("toc");
+  const tocHead = document.getElementById("toc-head");
+  let currentDoc = null;
+  let tocObserver = null;
+  let saveTimer = 0;
+  function saveScrollSoon() {
+    if (!currentDoc) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => lsSet(POS_PREFIX + currentDoc, String(Math.round(window.scrollY))), 250);
+  }
+  function slugify(t) {
+    return (t || "").trim().toLowerCase()
+      .replace(/[^\w\s가-힣-]/g, "")
+      .replace(/\s+/g, "-").slice(0, 64) || "section";
+  }
+  function buildToc() {
+    tocEl.innerHTML = "";
+    if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
+    const heads = Array.from(content.querySelectorAll("h2, h3"));
+    if (!heads.length) { tocHead.hidden = true; return; }
+    tocHead.hidden = false;
+    const seen = {};
+    const linkById = {};
+    heads.forEach((h) => {
+      const titleText = h.textContent;
+      let id = slugify(titleText);
+      if (seen[id]) { seen[id]++; id = id + "-" + seen[id]; } else seen[id] = 1;
+      h.id = id;
+      const li = document.createElement("li");
+      const link = document.createElement("a");
+      link.className = h.tagName === "H3" ? "h3" : "h2";
+      link.textContent = titleText;
+      link.href = "#";
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        h.scrollIntoView({ behavior: "smooth", block: "start" });
+        closeDrawer();
+      });
+      li.appendChild(link); tocEl.appendChild(li);
+      linkById[id] = link;
+    });
+    tocObserver = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          Object.values(linkById).forEach((l) => l.classList.remove("active"));
+          const l = linkById[en.target.id]; if (l) l.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-10% 0px -75% 0px" });
+    heads.forEach((h) => tocObserver.observe(h));
+  }
+
   function render(html) {
     content.innerHTML = DOMPurify.sanitize(html, {
       USE_PROFILES: { html: true, svg: true, mathMl: true },
@@ -338,17 +461,31 @@ function initViewer() {
   }
 
   let hljsReady = null;
+  const hljsLinks = { light: null, dark: null };
+  function mkLink(href) {
+    const l = document.createElement("link");
+    l.rel = "stylesheet"; l.href = href;
+    document.head.appendChild(l);
+    return l;
+  }
+  function syncHljsTheme() {
+    if (!hljsLinks.light) return;
+    const dark = effectiveDark();
+    hljsLinks.light.disabled = dark;
+    hljsLinks.dark.disabled = !dark;
+  }
   function highlightCode(root) {
     const blocks = Array.from(root.querySelectorAll("pre > code")).filter((c) => {
       const cls = c.className || "";
       return !/language-(mermaid|math)/.test(cls);
     });
     if (!blocks.length) return;
-    if (!hljsReady) {
-      loadStyle("assets/vendor/hljs-styles/github.min.css", "(prefers-color-scheme: light)");
-      loadStyle("assets/vendor/hljs-styles/github-dark.min.css", "(prefers-color-scheme: dark)");
-      hljsReady = loadScript("assets/vendor/highlight.min.js");
+    if (!hljsLinks.light) {
+      hljsLinks.light = mkLink("assets/vendor/hljs-styles/github.min.css");
+      hljsLinks.dark = mkLink("assets/vendor/hljs-styles/github-dark.min.css");
+      syncHljsTheme();
     }
+    if (!hljsReady) hljsReady = loadScript("assets/vendor/highlight.min.js");
     hljsReady.then(() => {
       if (!window.hljs) return;
       blocks.forEach((c) => { try { window.hljs.highlightElement(c); } catch (_) {} });
@@ -364,6 +501,7 @@ function initViewer() {
   async function openFile(name) {
     const file = files.find((f) => f.name === name) || files[0];
     if (!file) return;
+    currentDoc = null; // pause scroll saving during transition
     setActive(file.name);
     titleEl.textContent = file.title || file.name;
     content.innerHTML = '<p class="placeholder">불러오는 중…</p>';
@@ -374,11 +512,18 @@ function initViewer() {
       const text = await res.text();
       if (/\$\$?[^\s$]/.test(text)) { try { await loadKatex(); } catch (_) {} }
       render(marked.parse(text));
-      content.scrollIntoView({ block: "start" });
-      window.scrollTo(0, 0);
+      buildToc();
+      const saved = parseInt(lsGet(POS_PREFIX + file.name, "0"), 10) || 0;
+      window.scrollTo(0, saved);
+      setTimeout(() => window.scrollTo(0, saved), 60);
+      setTimeout(() => window.scrollTo(0, saved), 350);
     } catch (e) {
       content.innerHTML = '<p class="placeholder">문서를 불러오지 못했습니다.</p>';
+      tocHead.hidden = true; tocEl.innerHTML = "";
     }
+    currentDoc = file.name;
+    lsSet(LAST_KEY, file.name);
+    onScroll();
     const hash = "#" + encodeURIComponent(file.name);
     if (location.hash !== hash) history.replaceState(null, "", hash);
   }
@@ -420,7 +565,9 @@ function initViewer() {
       return;
     }
     buildList();
-    openFile(currentFromHash() || files[0].name);
+    const last = lsGet(LAST_KEY, null);
+    const initial = currentFromHash() || (last && files.some((f) => f.name === last) ? last : files[0].name);
+    openFile(initial);
   })();
 }
 
