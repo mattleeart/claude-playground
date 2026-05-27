@@ -97,7 +97,31 @@ button { font: inherit; }
   padding-left: 8px; padding-right: 8px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  transition: transform .25s ease;
 }
+.topbar.hidden { transform: translateY(-100%); }
+
+.to-top {
+  position: fixed; z-index: 38;
+  right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 44px; height: 44px; border-radius: 50%;
+  border: none; background: var(--accent); color: var(--accent-fg);
+  font-size: 1.3rem; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.to-top.show { opacity: .92; transform: translateY(0); pointer-events: auto; }
+
+.toast {
+  position: fixed; z-index: 210;
+  left: 50%; bottom: calc(28px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 12px);
+  background: rgba(15,23,42,.95); color: #f8fafc;
+  padding: 10px 18px; border-radius: 999px; font-size: .9rem;
+  opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
 .topbar-title {
   flex: 1; min-width: 0;
   font-size: 1.05rem; font-weight: 600; margin: 0;

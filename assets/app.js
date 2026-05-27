@@ -246,7 +246,10 @@ function initViewer() {
 
   let files = [];
 
-  function openDrawer() { drawer.classList.add("open"); backdrop.hidden = false; }
+  function openDrawer() {
+    drawer.classList.add("open"); backdrop.hidden = false;
+    const tb = document.querySelector(".topbar"); if (tb) tb.classList.remove("hidden");
+  }
   function closeDrawer() { drawer.classList.remove("open"); backdrop.hidden = true; }
 
   document.getElementById("menu-btn").addEventListener("click", openDrawer);
@@ -296,15 +299,72 @@ function initViewer() {
     });
   });
 
-  /* ---- reading progress bar ---- */
+  /* ---- reading progress, hide-on-scroll header, back-to-top ---- */
   const progress = document.getElementById("progress");
+  const topbar = document.querySelector(".topbar");
+  const toTop = document.getElementById("to-top");
+  toTop.hidden = false;
+  let lastY = 0;
   function onScroll() {
     const h = document.documentElement;
+    const y = h.scrollTop;
     const max = h.scrollHeight - h.clientHeight;
-    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    progress.style.width = (max > 0 ? (y / max) * 100 : 0) + "%";
+    if (y > 120 && y > lastY + 4) topbar.classList.add("hidden");
+    else if (y < lastY - 4 || y < 120) topbar.classList.remove("hidden");
+    toTop.classList.toggle("show", y > 500);
+    lastY = y;
     saveScrollSoon();
   }
   window.addEventListener("scroll", onScroll, { passive: true });
+  toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+  /* ---- toast ---- */
+  let toastEl = null, toastTimer = 0;
+  function toast(msg) {
+    if (!toastEl) { toastEl = document.createElement("div"); toastEl.className = "toast"; document.body.appendChild(toastEl); }
+    toastEl.textContent = msg; toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1600);
+  }
+  function copyText(t) {
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast("링크를 복사했습니다")).catch(() => {});
+    else toast("복사를 지원하지 않습니다");
+  }
+
+  /* ---- share / copy link ---- */
+  document.getElementById("share-btn").addEventListener("click", async () => {
+    settings.hidden = true;
+    const data = { title: titleEl.textContent, url: location.href };
+    if (navigator.share) { try { await navigator.share(data); } catch (_) {} }
+    else copyText(location.href);
+  });
+  document.getElementById("copylink-btn").addEventListener("click", () => { settings.hidden = true; copyText(location.href); });
+
+  /* ---- Esc to dismiss overlays ---- */
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (lightbox && lightbox.classList.contains("open")) lightbox.classList.remove("open");
+    else if (!settings.hidden) settings.hidden = true;
+    else if (drawer.classList.contains("open")) closeDrawer();
+  });
+
+  /* ---- edge-swipe to open / swipe to close the drawer ---- */
+  let sx = null, sy = null;
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) { sx = null; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    if (sx == null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx > 0 && sx < 40 && !drawer.classList.contains("open")) openDrawer();
+      else if (dx < 0 && drawer.classList.contains("open")) closeDrawer();
+    }
+    sx = sy = null;
+  }, { passive: true });
 
   /* ---- TOC + scroll memory ---- */
   const tocEl = document.getElementById("toc");
