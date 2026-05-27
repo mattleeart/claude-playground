@@ -329,10 +329,14 @@ function initViewer() {
     const t = getTheme();
     themeSeg.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.themeVal === t));
   }
+  function onThemeChanged() {
+    syncHljsTheme();
+    if (currentDoc && content.querySelector(".mermaid")) openFile(currentDoc);
+  }
   themeSeg.querySelectorAll(".seg-btn").forEach((b) => {
     b.addEventListener("click", () => {
       const t = b.dataset.themeVal;
-      lsSet(THEME_KEY, t); applyTheme(t); refreshThemeSeg(); syncHljsTheme();
+      lsSet(THEME_KEY, t); applyTheme(t); refreshThemeSeg(); onThemeChanged();
     });
   });
   refreshThemeSeg();
@@ -344,7 +348,7 @@ function initViewer() {
   document.getElementById("font-inc").addEventListener("click", () => setScale(getScale() + 0.1));
   document.getElementById("font-reset").addEventListener("click", () => setScale(1));
   if (window.matchMedia) {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") syncHljsTheme(); });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") onThemeChanged(); });
   }
 
   /* ---- search: title + full text ---- */
@@ -680,17 +684,15 @@ function initViewer() {
       code.parentElement.replaceWith(div);
       nodes.push(div);
     });
-    if (!mermaidReady) {
-      mermaidReady = loadScript("assets/vendor/mermaid.min.js").then(() => {
-        window.mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: prefersDark() ? "dark" : "default",
-        });
+    if (!mermaidReady) mermaidReady = loadScript("assets/vendor/mermaid.min.js");
+    mermaidReady.then(() => {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: effectiveDark() ? "dark" : "default",
       });
-    }
-    mermaidReady.then(() => window.mermaid.run({ nodes, suppressErrors: true }))
-      .catch(() => { nodes.forEach((n) => (n.textContent = "다이어그램을 불러오지 못했습니다.")); });
+      return window.mermaid.run({ nodes, suppressErrors: true });
+    }).catch(() => { nodes.forEach((n) => (n.textContent = "다이어그램을 불러오지 못했습니다.")); });
   }
 
   /* GitHub-style admonitions: blockquote starting with [!NOTE] etc. */
