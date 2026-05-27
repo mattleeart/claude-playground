@@ -170,9 +170,37 @@ button { font: inherit; }
   padding: .15em .4em; border-radius: 6px;
 }
 .markdown-body pre {
+  position: relative;
   background: var(--code-bg); padding: 14px; border-radius: 10px;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  font-size: .72rem; padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+  cursor: pointer; opacity: .85;
+}
+.copy-btn:active { background: var(--surface); }
+
+/* ---------- Callouts / admonitions ---------- */
+.callout {
+  margin: 1.1em 0; padding: 12px 14px;
+  border-radius: 10px; border: 1px solid var(--cl-border, var(--border));
+  border-left: 4px solid var(--cl-accent, var(--accent));
+  background: var(--cl-bg, var(--surface));
+}
+.callout-head {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700; font-size: .82rem; letter-spacing: .03em;
+  color: var(--cl-accent, var(--accent)); margin-bottom: 4px;
+}
+.callout-body > :first-child { margin-top: 0; }
+.callout-body > :last-child { margin-bottom: 0; }
+.callout-note    { --cl-accent: #3b82f6; --cl-bg: rgba(59,130,246,.08); }
+.callout-tip     { --cl-accent: #10b981; --cl-bg: rgba(16,185,129,.08); }
+.callout-important{ --cl-accent: #8b5cf6; --cl-bg: rgba(139,92,246,.08); }
+.callout-warning { --cl-accent: #f59e0b; --cl-bg: rgba(245,158,11,.10); }
+.callout-caution { --cl-accent: #ef4444; --cl-bg: rgba(239,68,68,.08); }
 .markdown-body pre code { background: none; padding: 0; font-size: .85em; }
 .markdown-body img { max-width: 100%; height: auto; border-radius: 8px; }
 .markdown-body table {

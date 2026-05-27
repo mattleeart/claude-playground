@@ -174,7 +174,78 @@ function initViewer() {
     location.reload();
   });
 
-  function render(html) { content.innerHTML = DOMPurify.sanitize(html); }
+  function render(html) {
+    content.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ["target"] });
+    enhance(content);
+  }
+
+  function enhance(root) {
+    transformCallouts(root);
+    addCopyButtons(root);
+    highlightCode(root);
+  }
+
+  /* GitHub-style admonitions: blockquote starting with [!NOTE] etc. */
+  const CALLOUT_RE = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i;
+  const CALLOUT_ICON = { note: "ℹ️", tip: "💡", important: "❗", warning: "⚠️", caution: "🛑" };
+  function transformCallouts(root) {
+    root.querySelectorAll("blockquote").forEach((bq) => {
+      const first = bq.querySelector("p");
+      if (!first) return;
+      const m = (first.textContent || "").match(CALLOUT_RE);
+      if (!m) return;
+      const kind = m[1].toLowerCase();
+      // strip the label, keeping any leading <br> trailing content
+      first.innerHTML = first.innerHTML.replace(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(<br\s*\/?>)?/i, "");
+      if (!first.textContent.trim() && !first.querySelector("img,code")) first.remove();
+      const box = document.createElement("div");
+      box.className = "callout callout-" + kind;
+      const head = document.createElement("div");
+      head.className = "callout-head";
+      head.innerHTML = `<span class="callout-ico">${CALLOUT_ICON[kind]}</span><span>${kind.toUpperCase()}</span>`;
+      const body = document.createElement("div");
+      body.className = "callout-body";
+      while (bq.firstChild) body.appendChild(bq.firstChild);
+      box.appendChild(head); box.appendChild(body);
+      bq.replaceWith(box);
+    });
+  }
+
+  function addCopyButtons(root) {
+    root.querySelectorAll("pre > code").forEach((code) => {
+      const pre = code.parentElement;
+      if (pre.dataset.copy) return;
+      pre.dataset.copy = "1";
+      const btn = document.createElement("button");
+      btn.className = "copy-btn"; btn.type = "button";
+      btn.textContent = "복사"; btn.setAttribute("aria-label", "코드 복사");
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(code.innerText);
+          btn.textContent = "복사됨"; setTimeout(() => (btn.textContent = "복사"), 1400);
+        } catch (_) { btn.textContent = "실패"; }
+      });
+      pre.appendChild(btn);
+    });
+  }
+
+  let hljsReady = null;
+  function highlightCode(root) {
+    const blocks = Array.from(root.querySelectorAll("pre > code")).filter((c) => {
+      const cls = c.className || "";
+      return !/language-(mermaid|math)/.test(cls);
+    });
+    if (!blocks.length) return;
+    if (!hljsReady) {
+      loadStyle("assets/vendor/hljs-styles/github.min.css", "(prefers-color-scheme: light)");
+      loadStyle("assets/vendor/hljs-styles/github-dark.min.css", "(prefers-color-scheme: dark)");
+      hljsReady = loadScript("assets/vendor/highlight.min.js");
+    }
+    hljsReady.then(() => {
+      if (!window.hljs) return;
+      blocks.forEach((c) => { try { window.hljs.highlightElement(c); } catch (_) {} });
+    }).catch(() => {});
+  }
 
   function setActive(name) {
     Array.from(list.children).forEach((li) => {
@@ -248,6 +319,31 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
   ));
+}
+
+/* ---------------- lazy asset loaders ---------------- */
+const _loaded = {};
+function loadScript(src) {
+  if (_loaded[src]) return _loaded[src];
+  _loaded[src] = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src; s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed to load " + src));
+    document.head.appendChild(s);
+  });
+  return _loaded[src];
+}
+function loadStyle(href, media) {
+  if (_loaded["css:" + href]) return;
+  _loaded["css:" + href] = true;
+  const l = document.createElement("link");
+  l.rel = "stylesheet"; l.href = href;
+  if (media) l.media = media;
+  document.head.appendChild(l);
+}
+function prefersDark() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
 /* ---------------- boot ---------------- */

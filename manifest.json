@@ -1,6 +1,24 @@
 {
   "files": [
     {
+      "name": "callouts.md",
+      "path": "content/callouts.md",
+      "title": "콜아웃 / 알림 박스",
+      "size": 892
+    },
+    {
+      "name": "code-samples.md",
+      "path": "content/code-samples.md",
+      "title": "코드 하이라이트 샘플",
+      "size": 1725
+    },
+    {
+      "name": "gfm-kitchen-sink.md",
+      "path": "content/gfm-kitchen-sink.md",
+      "title": "GFM 종합 샘플",
+      "size": 1412
+    },
+    {
       "name": "markdown-guide.md",
       "path": "content/markdown-guide.md",
       "title": "마크다운 가이드",
