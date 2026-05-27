@@ -182,6 +182,68 @@ function initViewer() {
 
   marked.setOptions({ gfm: true, breaks: false });
 
+  // ==highlight== mark extension (no async deps)
+  marked.use({
+    extensions: [{
+      name: "mark", level: "inline",
+      start(src) { const i = src.indexOf("=="); return i < 0 ? undefined : i; },
+      tokenizer(src) {
+        const m = /^==(?=\S)([\s\S]*?\S)==/.exec(src);
+        if (m) return { type: "mark", raw: m[0], tokens: this.lexer.inlineTokens(m[1]) };
+      },
+      renderer(t) { return "<mark>" + this.parser.parseInline(t.tokens) + "</mark>"; },
+    }],
+  });
+
+  /* ---- emoji shortcodes (lazy) ---- */
+  let emojiReady = null, emojiMap = null;
+  function loadEmoji() {
+    if (!emojiReady) {
+      emojiReady = fetch("assets/vendor/emoji.json", { cache: "force-cache" })
+        .then((r) => r.json())
+        .then((map) => {
+          emojiMap = map;
+          marked.use({
+            extensions: [{
+              name: "emoji", level: "inline",
+              start(src) { const i = src.indexOf(":"); return i < 0 ? undefined : i; },
+              tokenizer(src) {
+                const m = /^:([a-zA-Z0-9_+\-]+):/.exec(src);
+                if (m && emojiMap[m[1]]) return { type: "emoji", raw: m[0], text: emojiMap[m[1]] };
+              },
+              renderer(t) { return t.text; },
+            }],
+          });
+        });
+    }
+    return emojiReady;
+  }
+
+  /* ---- footnotes: [^id] refs + [^id]: definitions ---- */
+  function preprocessFootnotes(src) {
+    const defRe = /^\[\^([^\]\s]+)\]:[ \t]*(.+)$/gm;
+    const defs = {};
+    let m;
+    while ((m = defRe.exec(src))) defs[m[1]] = m[2].trim();
+    if (!Object.keys(defs).length) return src;
+    src = src.replace(defRe, "").replace(/\n{3,}/g, "\n\n");
+    const order = [];
+    src = src.replace(/\[\^([^\]\s]+)\]/g, (full, id) => {
+      if (!defs[id]) return full;
+      if (order.indexOf(id) < 0) order.push(id);
+      const n = order.indexOf(id) + 1;
+      return `<sup class="fnref" id="fnref-${escapeHtml(id)}"><a href="#fn-${escapeHtml(id)}">${n}</a></sup>`;
+    });
+    if (!order.length) return src;
+    let section = '\n\n<hr class="fn-sep">\n<ol class="footnotes">\n';
+    order.forEach((id) => {
+      const html = marked.parseInline(defs[id]);
+      section += `<li id="fn-${escapeHtml(id)}">${html} <a href="#fnref-${escapeHtml(id)}" class="fn-back" aria-label="돌아가기">↩</a></li>\n`;
+    });
+    section += "</ol>\n";
+    return src + section;
+  }
+
   let files = [];
 
   function openDrawer() { drawer.classList.add("open"); backdrop.hidden = false; }
@@ -509,8 +571,10 @@ function initViewer() {
     try {
       const res = await fetch(file.path, { cache: "no-cache" });
       if (!res.ok) throw new Error(res.status);
-      const text = await res.text();
+      let text = await res.text();
       if (/\$\$?[^\s$]/.test(text)) { try { await loadKatex(); } catch (_) {} }
+      if (/:[a-z0-9_+-]+:/i.test(text)) { try { await loadEmoji(); } catch (_) {} }
+      text = preprocessFootnotes(text);
       render(marked.parse(text));
       buildToc();
       const saved = parseInt(lsGet(POS_PREFIX + file.name, "0"), 10) || 0;
@@ -547,7 +611,9 @@ function initViewer() {
 
   window.addEventListener("hashchange", () => {
     const name = currentFromHash();
-    if (name) openFile(name);
+    // only treat the hash as a document; in-page anchors (footnotes, etc.)
+    // are left to the browser's native scroll.
+    if (name && files.some((f) => f.name === name)) openFile(name);
   });
 
   (async function load() {

@@ -19,6 +19,12 @@
       "size": 1356
     },
     {
+      "name": "extended.md",
+      "path": "content/extended.md",
+      "title": "확장 구문",
+      "size": 1127
+    },
+    {
       "name": "gfm-kitchen-sink.md",
       "path": "content/gfm-kitchen-sink.md",
       "title": "GFM 종합 샘플",

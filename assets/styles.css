@@ -282,6 +282,14 @@ button { font: inherit; }
 .markdown-body th { background: var(--surface); }
 .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
 .markdown-body input[type="checkbox"] { margin-right: .4em; }
+.markdown-body mark { background: #fde68a; color: #1f2933; padding: 0 .15em; border-radius: 3px; }
+:root[data-theme="dark"] .markdown-body mark { background: #b45309; color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .markdown-body mark { background: #b45309; color: #fff; } }
+.markdown-body sup.fnref a { text-decoration: none; color: var(--accent); font-weight: 600; padding: 0 .15em; }
+.markdown-body .fn-sep { margin-top: 2.5em; }
+.markdown-body .footnotes { font-size: .9em; color: var(--muted); }
+.markdown-body .footnotes li { margin: .4em 0; }
+.markdown-body .fn-back { text-decoration: none; color: var(--accent); margin-left: .3em; }
 
 /* ---------- Wide screens: persistent sidebar ---------- */
 @media (min-width: 900px) {
