@@ -255,6 +255,12 @@ button { font: inherit; }
   cursor: pointer; opacity: .85;
 }
 .copy-btn:active { background: var(--surface); }
+.lang-label {
+  position: absolute; top: 8px; left: 12px;
+  font-size: .68rem; letter-spacing: .03em; text-transform: uppercase;
+  color: var(--muted); opacity: .7; pointer-events: none;
+}
+.markdown-body pre { padding-top: 30px; }
 
 /* ---------- Callouts / admonitions ---------- */
 .callout {
@@ -318,6 +324,21 @@ button { font: inherit; }
 .markdown-body .footnotes { font-size: .9em; color: var(--muted); }
 .markdown-body .footnotes li { margin: .4em 0; }
 .markdown-body .fn-back { text-decoration: none; color: var(--accent); margin-left: .3em; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  html, .markdown-body { scroll-behavior: auto !important; }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  .topbar, .drawer, .backdrop, .to-top, .progress, .settings-panel, .copy-btn, .lock { display: none !important; }
+  .app { padding: 0 !important; }
+  .content { max-width: none; padding: 0; }
+  .markdown-body pre, .markdown-body img, .callout { break-inside: avoid; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .8em; color: #555; }
+}
 
 /* ---------- Wide screens: persistent sidebar ---------- */
 @media (min-width: 900px) {

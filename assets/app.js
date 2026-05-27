@@ -563,6 +563,16 @@ function initViewer() {
     addCopyButtons(root);
     highlightCode(root);
     setupImages(root);
+    linkifyExternal(root);
+  }
+
+  function linkifyExternal(root) {
+    root.querySelectorAll("a[href]").forEach((a) => {
+      if (/^https?:/i.test(a.getAttribute("href") || "")) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+    });
   }
 
   function setupImages(root) {
@@ -651,11 +661,19 @@ function initViewer() {
     });
   }
 
+  const LANG_LABELS = { js: "JavaScript", javascript: "JavaScript", ts: "TypeScript", typescript: "TypeScript", py: "Python", python: "Python", rb: "Ruby", sh: "Shell", bash: "Bash", json: "JSON", html: "HTML", css: "CSS", sql: "SQL", go: "Go", rust: "Rust", c: "C", cpp: "C++", java: "Java", yaml: "YAML", yml: "YAML", md: "Markdown", text: "Text" };
   function addCopyButtons(root) {
     root.querySelectorAll("pre > code").forEach((code) => {
       const pre = code.parentElement;
       if (pre.dataset.copy) return;
       pre.dataset.copy = "1";
+      const m = /language-([\w-]+)/.exec(code.className || "");
+      if (m && !/^(mermaid|math)$/.test(m[1])) {
+        const label = document.createElement("span");
+        label.className = "lang-label";
+        label.textContent = LANG_LABELS[m[1].toLowerCase()] || m[1];
+        pre.appendChild(label);
+      }
       const btn = document.createElement("button");
       btn.className = "copy-btn"; btn.type = "button";
       btn.textContent = "복사"; btn.setAttribute("aria-label", "코드 복사");
@@ -703,7 +721,9 @@ function initViewer() {
 
   function setActive(name) {
     Array.from(list.children).forEach((li) => {
-      li.classList.toggle("active", li.dataset.name === name);
+      const on = li.dataset.name === name;
+      li.classList.toggle("active", on);
+      if (on) li.setAttribute("aria-current", "page"); else li.removeAttribute("aria-current");
     });
   }
 
