@@ -629,10 +629,12 @@ function initViewer() {
     editingState = null;
     document.body.classList.remove("editing");
     editorEl.hidden = true; content.hidden = false;
-    // reset preview mode
+    // reset preview mode and meta form
     if (editorTextarea && editorTextarea.parentElement) editorTextarea.parentElement.classList.remove("preview-on");
     const pBtn = editorToolbar && editorToolbar.querySelector('[data-action="preview"]');
     if (pBtn) pBtn.classList.remove("on");
+    const mf = document.getElementById("meta-form"); if (mf) mf.hidden = true;
+    const fb = document.getElementById("find-bar"); if (fb) fb.hidden = true;
     setEditorStatus("");
   }
 
@@ -802,10 +804,71 @@ function initViewer() {
       applyInsert("\n\n$$\n수식 = \\frac{a}{b}\n$$\n\n");
     } else if (a === "snip-details") {
       applyInsert("\n\n<details>\n<summary>제목</summary>\n\n숨겨진 내용\n\n</details>\n\n");
-    } else if (a === "outline") toggleOutline();
+    } else if (a === "meta") toggleMetaForm();
+    else if (a === "outline") toggleOutline();
     else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
   });
+
+  /* ---- frontmatter form ---- */
+  const metaForm = document.getElementById("meta-form");
+  const metaTitle = document.getElementById("meta-title");
+  const metaDate = document.getElementById("meta-date");
+  const metaTags = document.getElementById("meta-tags");
+  function yamlValue(s) {
+    s = String(s);
+    if (/^[\w가-힣 .,_-]+$/.test(s) && !/^\d/.test(s) && !/^(true|false|null|yes|no)$/i.test(s)) return s;
+    return JSON.stringify(s);
+  }
+  function writeFrontmatter(meta, body) {
+    const keys = Object.keys(meta).filter((k) => meta[k] != null && meta[k] !== "" && !(Array.isArray(meta[k]) && !meta[k].length));
+    if (!keys.length) return body.replace(/^\n+/, "");
+    const lines = ["---"];
+    if (meta.title) lines.push("title: " + yamlValue(meta.title));
+    if (meta.date) lines.push("date: " + meta.date);
+    if (meta.tags && meta.tags.length) lines.push("tags: [" + meta.tags.map(yamlValue).join(", ") + "]");
+    Object.keys(meta).forEach((k) => {
+      if (k === "title" || k === "date" || k === "tags") return;
+      const v = meta[k]; if (v == null || v === "") return;
+      lines.push(k + ": " + (Array.isArray(v) ? "[" + v.map(yamlValue).join(", ") + "]" : yamlValue(v)));
+    });
+    lines.push("---");
+    return lines.join("\n") + "\n" + body.replace(/^\n+/, "");
+  }
+  function loadMetaForm() {
+    const { meta } = parseFrontmatter(editorTextarea.value);
+    metaTitle.value = meta.title || "";
+    metaDate.value = (meta.date && /^\d{4}-\d{2}-\d{2}/.test(meta.date)) ? meta.date.slice(0, 10) : "";
+    metaTags.value = Array.isArray(meta.tags) ? meta.tags.join(", ") : (meta.tags || "");
+  }
+  function toggleMetaForm() {
+    if (metaForm.hidden) { loadMetaForm(); metaForm.hidden = false; metaTitle.focus(); }
+    else metaForm.hidden = true;
+  }
+  let metaTimer = 0;
+  function commitMetaForm() {
+    const v = editorTextarea.value;
+    const { meta: existing, body } = parseFrontmatter(v);
+    const next = { ...existing };
+    next.title = metaTitle.value.trim() || undefined;
+    next.date = metaDate.value.trim() || undefined;
+    const tags = metaTags.value.split(",").map((s) => s.trim()).filter(Boolean);
+    next.tags = tags.length ? tags : undefined;
+    const newText = writeFrontmatter(next, body);
+    if (newText === v) return;
+    editorTextarea.focus();
+    editorTextarea.setSelectionRange(0, v.length);
+    const ok = document.execCommand && document.execCommand("insertText", false, newText);
+    if (!ok) { editorTextarea.value = newText; dispatchInput(); }
+    // restore caret to start of body for sanity
+    const bodyStart = newText.length - body.replace(/^\n+/, "").length;
+    setSel(bodyStart);
+  }
+  function onMetaInput() {
+    clearTimeout(metaTimer);
+    metaTimer = setTimeout(commitMetaForm, 350);
+  }
+  [metaTitle, metaDate, metaTags].forEach((el) => el.addEventListener("input", onMetaInput));
 
   const outlinePop = document.getElementById("outline-pop");
   const outlineList = document.getElementById("outline-list");

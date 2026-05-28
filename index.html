@@ -128,9 +128,15 @@
         <button class="tb" data-action="snip-math" title="수식 블록" aria-label="수식 블록">∑</button>
         <button class="tb" data-action="snip-details" title="접기/펼치기" aria-label="접기 블록">▾</button>
         <span class="tb-sep"></span>
+        <button class="tb" data-action="meta" title="메타데이터 (제목·날짜·태그)" aria-label="메타데이터">🏷</button>
         <button class="tb" data-action="outline" title="문서 내 목차로 이동" aria-label="목차">📑</button>
         <button class="tb" data-action="preview" title="미리보기" aria-label="미리보기">👁</button>
         <button class="tb tb-danger" data-action="delete" title="문서 삭제" aria-label="문서 삭제">🗑</button>
+      </div>
+      <div id="meta-form" class="meta-form" hidden aria-label="문서 메타데이터">
+        <label class="meta-row"><span>제목</span><input id="meta-title" type="text" placeholder="문서 제목" /></label>
+        <label class="meta-row"><span>날짜</span><input id="meta-date" type="date" /></label>
+        <label class="meta-row"><span>태그</span><input id="meta-tags" type="text" placeholder="쉼표로 구분 (markdown, 메모, 일지)" /></label>
       </div>
       <div id="find-bar" class="find-bar" hidden role="search" aria-label="찾기 / 바꾸기">
         <input id="find-input" class="find-input" placeholder="찾기" aria-label="찾기" />

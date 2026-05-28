@@ -237,6 +237,19 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
 .find-btn:active { background: var(--surface); }
 .find-close { margin-left: auto; }
 .find-count { font-size: .78rem; color: var(--muted); padding: 0 4px; }
+
+.meta-form {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.meta-row { display: flex; align-items: center; gap: 10px; font-size: .82rem; }
+.meta-row > span { flex: 0 0 48px; color: var(--muted); }
+.meta-row > input {
+  flex: 1; min-width: 0;
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--fg); font-size: .9rem;
+}
 @media (min-width: 900px) {
   .editor { left: var(--drawer-w); }
 }
