@@ -214,6 +214,12 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   top: auto; bottom: 56px; right: 8px;
   max-height: 50vh;
 }
+.history-pop { max-height: 60vh; }
+.history-pop .outline-list li a {
+  white-space: normal;
+  padding: 10px 12px;
+}
+.history-pop .hist-meta { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
 .outline-list li[aria-selected="true"] a { background: var(--surface); color: var(--accent); }
 .outline-list .slash-hint {
   font-size: .72rem; color: var(--muted); float: right; padding-top: 1px;

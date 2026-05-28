@@ -836,6 +836,7 @@ function initViewer() {
       applyInsert("\n\n<details>\n<summary>제목</summary>\n\n숨겨진 내용\n\n</details>\n\n");
     } else if (a === "meta") toggleMetaForm();
     else if (a === "outline") toggleOutline();
+    else if (a === "history") toggleHistory();
     else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
   });
@@ -941,6 +942,46 @@ function initViewer() {
     if (outlinePop.contains(e.target)) return;
     if (e.target.closest && e.target.closest('[data-action="outline"]')) return;
     outlinePop.hidden = true;
+  });
+
+  /* ---- commit history viewer ---- */
+  const historyPop = document.getElementById("history-pop");
+  const historyList = document.getElementById("history-list");
+  async function toggleHistory() {
+    if (!historyPop.hidden) { historyPop.hidden = true; return; }
+    if (!editingState) return;
+    setEditorStatus("이력을 불러오는 중…");
+    try {
+      const url = `https://api.github.com/repos/${REPO.owner}/${REPO.repo}/commits?path=${encodeURIComponent(editingState.path)}&per_page=15&sha=${encodeURIComponent(REPO.branch)}`;
+      const r = await fetch(url, { headers: ghHeaders(false) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const commits = await r.json();
+      historyList.innerHTML = "";
+      if (!commits.length) {
+        const li = document.createElement("li"); li.className = "empty";
+        li.textContent = "이력이 없습니다."; historyList.appendChild(li);
+      } else {
+        commits.forEach((c) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a"); a.href = c.html_url || "#"; a.target = "_blank"; a.rel = "noopener";
+          const msg = (c.commit && c.commit.message || "").split("\n")[0];
+          const author = c.commit && c.commit.author && c.commit.author.name || "";
+          const dt = c.commit && c.commit.author && c.commit.author.date ? new Date(c.commit.author.date).toLocaleString("ko-KR") : "";
+          a.innerHTML = "<strong>" + escapeHtml(msg) + "</strong>" + '<span class="hist-meta">' + escapeHtml(author) + (dt ? " · " + escapeHtml(dt) : "") + "</span>";
+          li.appendChild(a); historyList.appendChild(li);
+        });
+      }
+      historyPop.hidden = false;
+      setEditorStatus("");
+    } catch (e) {
+      setEditorStatus("이력 불러오기 실패: " + e.message, "error");
+    }
+  }
+  document.addEventListener("click", (e) => {
+    if (historyPop.hidden) return;
+    if (historyPop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('[data-action="history"]')) return;
+    historyPop.hidden = true;
   });
 
   /* ---- find / replace in editor ---- */
