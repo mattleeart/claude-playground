@@ -65,7 +65,7 @@ function applyTheme(t) {
   if (t === "auto") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", t);
 }
-function getScale() { return Math.min(1.6, Math.max(0.8, parseFloat(lsGet(SCALE_KEY, "1")) || 1)); }
+function getScale() { return Math.min(2.2, Math.max(0.7, parseFloat(lsGet(SCALE_KEY, "1")) || 1)); }
 function applyScale(s) { document.documentElement.style.setProperty("--md-scale", String(s)); }
 function effectiveDark() {
   const t = document.documentElement.getAttribute("data-theme");
@@ -474,13 +474,10 @@ function initViewer() {
     });
   });
   refreshThemeSeg();
-  function setScale(s) {
-    s = Math.min(1.6, Math.max(0.8, Math.round(s * 100) / 100));
-    lsSet(SCALE_KEY, String(s)); applyScale(s);
-  }
-  document.getElementById("font-dec").addEventListener("click", () => setScale(getScale() - 0.1));
-  document.getElementById("font-inc").addEventListener("click", () => setScale(getScale() + 0.1));
-  document.getElementById("font-reset").addEventListener("click", () => setScale(1));
+  // setZoom is defined later (function declaration; hoisted within initViewer)
+  document.getElementById("font-dec").addEventListener("click", () => setZoom(getScale() - 0.1, true));
+  document.getElementById("font-inc").addEventListener("click", () => setZoom(getScale() + 0.1, true));
+  document.getElementById("font-reset").addEventListener("click", () => setZoom(1, true));
   const spellcheckToggle = document.getElementById("spellcheck-toggle");
   spellcheckToggle.checked = lsGet("mdv_spellcheck", "0") === "1";
   const applySpellcheck = () => {
@@ -1678,6 +1675,50 @@ function initViewer() {
     }
     sx = sy = null;
   }, { passive: true });
+
+  /* ---- pinch / wheel zoom on content ---- */
+  const ZOOM_MIN = 0.7, ZOOM_MAX = 2.2;
+  let zoomBadge = null, zoomTimer = 0;
+  function showZoomBadge(scale) {
+    if (!zoomBadge) { zoomBadge = document.createElement("div"); zoomBadge.className = "zoom-badge"; document.body.appendChild(zoomBadge); }
+    zoomBadge.textContent = Math.round(scale * 100) + "%";
+    zoomBadge.classList.add("show");
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(() => zoomBadge.classList.remove("show"), 900);
+  }
+  function setZoom(s, persist) {
+    s = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(s * 100) / 100));
+    applyScale(s);
+    showZoomBadge(s);
+    if (persist) lsSet(SCALE_KEY, String(s));
+  }
+  let pinchStart = null;
+  function tdist(a, b) { return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY); }
+  content.addEventListener("touchstart", (e) => {
+    if (document.body.classList.contains("editing")) return;
+    if (e.touches.length === 2) {
+      pinchStart = { d: tdist(e.touches[0], e.touches[1]), scale: getScale() };
+    }
+  }, { passive: true });
+  content.addEventListener("touchmove", (e) => {
+    if (pinchStart && e.touches.length === 2) {
+      e.preventDefault();
+      const d = tdist(e.touches[0], e.touches[1]);
+      setZoom(pinchStart.scale * (d / pinchStart.d), false);
+    }
+  }, { passive: false });
+  content.addEventListener("touchend", (e) => {
+    if (pinchStart && e.touches.length < 2) {
+      const live = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--md-scale")) || 1;
+      lsSet(SCALE_KEY, String(live));
+      pinchStart = null;
+    }
+  }, { passive: true });
+  content.addEventListener("wheel", (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    setZoom(getScale() + (e.deltaY > 0 ? -0.05 : 0.05), true);
+  }, { passive: false });
 
   /* ---- TOC + scroll memory ---- */
   const tocEl = document.getElementById("toc");
