@@ -887,6 +887,7 @@ function initViewer() {
     } else if (a === "meta") toggleMetaForm();
     else if (a === "outline") toggleOutline();
     else if (a === "history") toggleHistory();
+    else if (a === "diff") showDiff();
     else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
   });
@@ -1032,6 +1033,59 @@ function initViewer() {
     if (historyPop.contains(e.target)) return;
     if (e.target.closest && e.target.closest('[data-action="history"]')) return;
     historyPop.hidden = true;
+  });
+
+  /* ---- diff viewer (current edits vs original) ---- */
+  function lineDiff(a, b) {
+    const A = a.split("\n"), B = b.split("\n");
+    const m = A.length, n = B.length;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+      dp[i][j] = A[i - 1] === B[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+    const out = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && A[i - 1] === B[j - 1]) { out.unshift({ t: "same", v: A[i - 1] }); i--; j--; }
+      else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) { out.unshift({ t: "add", v: B[j - 1] }); j--; }
+      else if (i > 0) { out.unshift({ t: "del", v: A[i - 1] }); i--; }
+    }
+    return out;
+  }
+  function showDiff() {
+    const pop = document.getElementById("diff-pop");
+    const body = document.getElementById("diff-body");
+    if (!editingState) { toast("편집 중이 아닙니다"); return; }
+    const diff = lineDiff(editingState.original, editorTextarea.value);
+    const changed = diff.filter((d) => d.t !== "same").length;
+    if (!changed) {
+      body.innerHTML = '<div class="diff-empty">변경 사항이 없습니다.</div>';
+    } else {
+      // collapse long stretches of unchanged lines
+      const out = [];
+      for (let i = 0; i < diff.length; i++) {
+        if (diff[i].t === "same") {
+          const start = i;
+          while (i < diff.length && diff[i].t === "same") i++;
+          const run = diff.slice(start, i);
+          if (run.length <= 4) run.forEach((r) => out.push(r));
+          else { out.push(run[0]); out.push({ t: "ellipsis", v: `… ${run.length - 2}줄 동일 …` }); out.push(run[run.length - 1]); }
+          i--;
+        } else {
+          out.push(diff[i]);
+        }
+      }
+      const sym = { add: "+", del: "−", same: " ", ellipsis: " " };
+      body.innerHTML = out.map((d) => `<div class="diff-line ${d.t}">${sym[d.t]} ${escapeHtml(d.v)}</div>`).join("");
+    }
+    pop.hidden = false;
+  }
+  document.getElementById("diff-close").addEventListener("click", () => { document.getElementById("diff-pop").hidden = true; });
+  document.addEventListener("click", (e) => {
+    const pop = document.getElementById("diff-pop"); if (!pop || pop.hidden) return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('[data-action="diff"]')) return;
+    pop.hidden = true;
   });
 
   /* ---- find / replace in editor ---- */
@@ -1217,7 +1271,8 @@ function initViewer() {
     if (files.some((f) => f.name === name)) { toast("이미 존재하는 파일명입니다"); return; }
     if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰을 먼저 입력하세요"); return; }
     const title = name.replace(/\.md$/i, "");
-    const tpl = "# " + title + "\n\n";
+    const today = new Date().toISOString().slice(0, 10);
+    const tpl = "---\ndate: " + today + "\n---\n\n# " + title + "\n\n";
     try {
       const { sha } = await ghPut("content/" + name, tpl, null, "docs: add " + name);
       const f = { name, path: "content/" + name, title, size: tpl.length };

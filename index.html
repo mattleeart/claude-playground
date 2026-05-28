@@ -126,6 +126,14 @@
       <p class="placeholder">문서를 불러오는 중…</p>
     </main>
 
+    <div id="diff-pop" class="outline-pop diff-pop" hidden role="dialog" aria-label="변경 비교">
+      <div class="outline-head shortcuts-head">
+        <span>변경된 부분</span>
+        <button id="diff-close" class="drawer-action" aria-label="닫기">✕</button>
+      </div>
+      <div id="diff-body" class="diff-body"></div>
+    </div>
+
     <div id="history-pop" class="outline-pop history-pop" hidden role="dialog" aria-label="커밋 이력">
       <div class="outline-head">커밋 이력</div>
       <ul id="history-list" class="outline-list"></ul>
@@ -166,6 +174,7 @@
         <button class="tb" data-action="meta" title="메타데이터 (제목·날짜·태그)" aria-label="메타데이터">🏷</button>
         <button class="tb" data-action="outline" title="문서 내 목차로 이동" aria-label="목차">📑</button>
         <button class="tb" data-action="history" title="커밋 이력" aria-label="이력">📜</button>
+        <button class="tb" data-action="diff" title="저장본과 비교" aria-label="변경 보기">±</button>
         <button class="tb" data-action="preview" title="미리보기" aria-label="미리보기">👁</button>
         <button class="tb tb-danger" data-action="delete" title="문서 삭제" aria-label="문서 삭제">🗑</button>
       </div>

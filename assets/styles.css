@@ -221,11 +221,24 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
 }
 .history-pop .hist-meta { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
 
-.shortcuts-pop {
+.shortcuts-pop, .diff-pop {
   top: 50%; left: 50%; right: auto; bottom: auto;
   transform: translate(-50%, -50%);
-  width: min(420px, 92vw); max-height: 80vh;
+  width: min(520px, 94vw); max-height: 84vh;
 }
+.diff-body {
+  padding: 6px 12px 14px;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-x: auto;
+}
+.diff-line { padding: 1px 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+.diff-line.add { background: rgba(16,185,129,.14); color: #047857; }
+.diff-line.del { background: rgba(239,68,68,.14); color: #b91c1c; text-decoration: line-through; text-decoration-color: rgba(185,28,28,.4); }
+.diff-line.same { color: var(--muted); opacity: .6; }
+:root[data-theme="dark"] .diff-line.add { color: #34d399; }
+:root[data-theme="dark"] .diff-line.del { color: #fca5a5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .diff-line.add { color: #34d399; } :root:not([data-theme="light"]) .diff-line.del { color: #fca5a5; } }
+.diff-empty { padding: 12px; color: var(--muted); font-style: italic; }
 .shortcuts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 8px; }
 .shortcuts-table {
   width: 100%; border-collapse: collapse; font-size: .82rem;
