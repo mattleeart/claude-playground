@@ -1694,28 +1694,58 @@ function initViewer() {
   }
   let pinchStart = null;
   function tdist(a, b) { return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY); }
-  content.addEventListener("touchstart", (e) => {
-    if (document.body.classList.contains("editing")) return;
+  function startPinch(initialDist, initialScale) {
+    pinchStart = { d: initialDist, scale: initialScale };
+    document.body.classList.add("pinching");
+  }
+  function endPinch() {
+    if (!pinchStart) return;
+    const live = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--md-scale")) || 1;
+    lsSet(SCALE_KEY, String(live));
+    pinchStart = null;
+    document.body.classList.remove("pinching");
+  }
+  function pinchAllowed() {
+    if (document.body.classList.contains("editing")) return false;
+    const lb = document.querySelector(".lightbox"); if (lb && lb.classList.contains("open")) return false;
+    return true;
+  }
+  // Touch events on document so a pinch anywhere on screen scales the text.
+  document.addEventListener("touchstart", (e) => {
+    if (!pinchAllowed()) return;
     if (e.touches.length === 2) {
-      pinchStart = { d: tdist(e.touches[0], e.touches[1]), scale: getScale() };
+      e.preventDefault();
+      startPinch(tdist(e.touches[0], e.touches[1]), getScale());
     }
-  }, { passive: true });
-  content.addEventListener("touchmove", (e) => {
-    if (pinchStart && e.touches.length === 2) {
+  }, { passive: false });
+  document.addEventListener("touchmove", (e) => {
+    if (pinchStart && e.touches.length >= 2) {
       e.preventDefault();
       const d = tdist(e.touches[0], e.touches[1]);
       setZoom(pinchStart.scale * (d / pinchStart.d), false);
     }
   }, { passive: false });
-  content.addEventListener("touchend", (e) => {
-    if (pinchStart && e.touches.length < 2) {
-      const live = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--md-scale")) || 1;
-      lsSet(SCALE_KEY, String(live));
-      pinchStart = null;
-    }
+  document.addEventListener("touchend", (e) => {
+    if (pinchStart && e.touches.length < 2) endPinch();
   }, { passive: true });
-  content.addEventListener("wheel", (e) => {
+  document.addEventListener("touchcancel", () => endPinch(), { passive: true });
+  // iOS Safari: WebKit-specific gesture events fire for pinches and are the
+  // most reliable way to stop the visual-viewport zoom from kicking in.
+  document.addEventListener("gesturestart", (e) => {
+    if (!pinchAllowed()) return;
+    e.preventDefault();
+    startPinch(1, getScale());
+  }, { passive: false });
+  document.addEventListener("gesturechange", (e) => {
+    if (!pinchStart) return;
+    e.preventDefault();
+    setZoom(pinchStart.scale * (e.scale || 1), false);
+  }, { passive: false });
+  document.addEventListener("gestureend", (e) => { try { e.preventDefault(); } catch (_) {} endPinch(); }, { passive: false });
+  // Ctrl/Cmd + wheel for desktop.
+  document.addEventListener("wheel", (e) => {
     if (!(e.ctrlKey || e.metaKey)) return;
+    if (document.body.classList.contains("editing")) return;
     e.preventDefault();
     setZoom(getScale() + (e.deltaY > 0 ? -0.05 : 0.05), true);
   }, { passive: false });

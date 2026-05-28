@@ -507,6 +507,10 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   transition: opacity .15s ease;
 }
 .zoom-badge.show { opacity: 1; }
+
+/* While pinching, force the entire page to ignore native touch gestures so
+   iOS Safari can't intercept the pinch and visual-viewport-zoom instead. */
+body.pinching, body.pinching * { touch-action: none !important; }
 .doc-meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   margin: .2em 0 1.4em; font-size: .82rem; color: var(--muted);
