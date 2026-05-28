@@ -367,11 +367,13 @@ function initViewer() {
     let any = false;
     files.forEach((f) => {
       const text = docText[f.name]; if (!text) return;
-      const { meta } = parseFrontmatter(text);
+      const { meta, body } = parseFrontmatter(text);
       if (meta.tags) {
         f.tags = Array.isArray(meta.tags) ? meta.tags : [meta.tags];
         any = true;
       }
+      f.readingMin = readingStats(body).minutes;
+      any = true;
     });
     if (any) buildList();
   }
@@ -1680,7 +1682,8 @@ function initViewer() {
         const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
         const tagsHtml = f.tags && f.tags.length
           ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
-        li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>${tagsHtml}`;
+        const rt = f.readingMin ? " · ⏱️" + f.readingMin + "분" : "";
+        li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}${rt}</span>${tagsHtml}`;
         li.addEventListener("click", (ev) => {
           const tagEl = ev.target.closest(".file-tag");
           if (tagEl) { ev.stopPropagation(); activeTag = tagEl.dataset.tag; buildList(); return; }
