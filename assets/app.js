@@ -566,6 +566,25 @@ function initViewer() {
     else copyText(location.href);
   });
   document.getElementById("copylink-btn").addEventListener("click", () => { settings.hidden = true; copyText(location.href); });
+  document.getElementById("download-btn").addEventListener("click", async () => {
+    settings.hidden = true;
+    if (!currentDoc) return;
+    let text = "";
+    if (editingState && editingState.name === currentDoc) text = editorTextarea.value;
+    else if (docText[currentDoc]) text = docText[currentDoc];
+    else {
+      const file = files.find((f) => f.name === currentDoc);
+      if (file) { try { const r = await fetch(file.path, { cache: "no-cache" }); text = await r.text(); } catch (_) {} }
+    }
+    if (!text) { toast("다운로드할 본문이 없습니다"); return; }
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = currentDoc; a.style.display = "none";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("다운로드 시작");
+  });
 
   /* ---- GitHub token field ---- */
   const tokenInput = document.getElementById("gh-token");
