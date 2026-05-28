@@ -775,8 +775,52 @@ function initViewer() {
       applyInsert("\n\n$$\n수식 = \\frac{a}{b}\n$$\n\n");
     } else if (a === "snip-details") {
       applyInsert("\n\n<details>\n<summary>제목</summary>\n\n숨겨진 내용\n\n</details>\n\n");
-    } else if (a === "preview") togglePreview();
+    } else if (a === "outline") toggleOutline();
+    else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
+  });
+
+  const outlinePop = document.getElementById("outline-pop");
+  const outlineList = document.getElementById("outline-list");
+  function toggleOutline() {
+    if (!outlinePop.hidden) { outlinePop.hidden = true; return; }
+    const v = editorTextarea.value;
+    const lines = v.split("\n");
+    const heads = [];
+    let pos = 0;
+    for (const line of lines) {
+      const m = /^(#{1,3})\s+(.+?)\s*$/.exec(line);
+      if (m) heads.push({ level: m[1].length, text: m[2], start: pos });
+      pos += line.length + 1;
+    }
+    outlineList.innerHTML = "";
+    if (!heads.length) {
+      const li = document.createElement("li"); li.className = "empty";
+      li.textContent = "이 문서에는 제목(# / ## / ###)이 없습니다.";
+      outlineList.appendChild(li);
+    } else {
+      heads.forEach((h) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#"; a.className = "l" + h.level; a.textContent = h.text;
+        a.addEventListener("click", (e) => {
+          e.preventDefault();
+          editorTextarea.focus();
+          editorTextarea.setSelectionRange(h.start, h.start);
+          // force scroll by re-applying focus
+          editorTextarea.blur(); editorTextarea.focus();
+          outlinePop.hidden = true;
+        });
+        li.appendChild(a); outlineList.appendChild(li);
+      });
+    }
+    outlinePop.hidden = false;
+  }
+  document.addEventListener("click", (e) => {
+    if (outlinePop.hidden) return;
+    if (outlinePop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('[data-action="outline"]')) return;
+    outlinePop.hidden = true;
   });
 
   async function newDoc() {

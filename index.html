@@ -89,6 +89,11 @@
       <p class="placeholder">문서를 불러오는 중…</p>
     </main>
 
+    <div id="outline-pop" class="outline-pop" hidden role="dialog" aria-label="문서 목차">
+      <div class="outline-head">문서 내 목차</div>
+      <ul id="outline-list" class="outline-list"></ul>
+    </div>
+
     <section id="editor" class="editor" hidden aria-label="마크다운 편집기">
       <div class="editor-toolbar" id="editor-toolbar" role="toolbar" aria-label="서식">
         <button class="tb" data-action="heading" title="제목" aria-label="제목">H</button>
@@ -111,6 +116,7 @@
         <button class="tb" data-action="snip-math" title="수식 블록" aria-label="수식 블록">∑</button>
         <button class="tb" data-action="snip-details" title="접기/펼치기" aria-label="접기 블록">▾</button>
         <span class="tb-sep"></span>
+        <button class="tb" data-action="outline" title="문서 내 목차로 이동" aria-label="목차">📑</button>
         <button class="tb" data-action="preview" title="미리보기" aria-label="미리보기">👁</button>
         <button class="tb tb-danger" data-action="delete" title="문서 삭제" aria-label="문서 삭제">🗑</button>
       </div>

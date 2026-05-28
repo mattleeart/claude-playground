@@ -175,6 +175,30 @@ body.editing .to-top, body.editing .progress { display: none !important; }
 .editor-info { flex: 0 0 auto; font-variant-numeric: tabular-nums; opacity: .85; }
 .editor-status.error .editor-msg { color: #ef4444; }
 .editor-status.ok .editor-msg { color: #10b981; }
+
+.outline-pop {
+  position: fixed; z-index: 50;
+  top: calc(var(--topbar-h) + env(safe-area-inset-top) + 50px);
+  right: 8px; width: min(320px, 92vw);
+  max-height: 60vh; overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  padding: 6px;
+}
+.outline-head {
+  padding: 8px 10px; color: var(--muted);
+  font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+}
+.outline-list { list-style: none; margin: 0; padding: 0 0 6px; }
+.outline-list li a {
+  display: block; padding: 8px 12px; border-radius: 8px;
+  color: var(--fg); font-size: .92rem; text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.outline-list li a:active { background: var(--surface); }
+.outline-list li a.l2 { padding-left: 26px; color: var(--muted); }
+.outline-list li a.l3 { padding-left: 42px; color: var(--muted); font-size: .86rem; }
+.outline-list .empty { color: var(--muted); padding: 8px 12px; font-size: .85rem; }
 @media (min-width: 900px) {
   .editor { left: var(--drawer-w); }
 }
