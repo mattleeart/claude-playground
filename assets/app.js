@@ -356,6 +356,24 @@ function initViewer() {
   function openDrawer() {
     drawer.classList.add("open"); backdrop.hidden = false;
     const tb = document.querySelector(".topbar"); if (tb) tb.classList.remove("hidden");
+    loadAllTags();
+  }
+
+  let tagsLoaded = false;
+  async function loadAllTags() {
+    if (tagsLoaded) return;
+    tagsLoaded = true;
+    try { await ensureAllDocs(); } catch (_) {}
+    let any = false;
+    files.forEach((f) => {
+      const text = docText[f.name]; if (!text) return;
+      const { meta } = parseFrontmatter(text);
+      if (meta.tags) {
+        f.tags = Array.isArray(meta.tags) ? meta.tags : [meta.tags];
+        any = true;
+      }
+    });
+    if (any) buildList();
   }
   function closeDrawer() { drawer.classList.remove("open"); backdrop.hidden = true; }
 
@@ -1587,7 +1605,9 @@ function initViewer() {
       const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
       const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
       const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
-      li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>`;
+      const tagsHtml = f.tags && f.tags.length
+        ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
+      li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>${tagsHtml}`;
       li.addEventListener("click", () => openFile(f.name));
       list.appendChild(li);
     });

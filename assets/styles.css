@@ -370,6 +370,16 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   background: var(--accent); color: var(--accent-fg);
   margin-left: 4px;
 }
+.file-tags { display: block; margin-top: 4px; }
+.file-tag {
+  display: inline-block;
+  font-size: .68rem; font-weight: 500;
+  color: var(--accent);
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 999px; padding: 1px 7px;
+  margin-right: 4px; margin-top: 2px;
+}
+.file-list li.active .file-tag { color: var(--accent-fg); border-color: rgba(255,255,255,.4); }
 
 .content {
   padding: 20px max(16px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
