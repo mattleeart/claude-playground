@@ -8,7 +8,7 @@ const AUTH = { salt: "074566f4abd1ce3f6696046e6d584f2a", iterations: 150000, has
 const SESSION_KEY = "mdv_unlocked";
 const THEME_KEY = "mdv_theme", SCALE_KEY = "mdv_scale", LAST_KEY = "mdv_last", POS_PREFIX = "mdv_pos_";
 const TOKEN_KEY = "mdv_gh_token", DRAFT_PREFIX = "mdv_draft_";
-const SORT_KEY = "mdv_sort", RECENT_KEY = "mdv_recent";
+const SORT_KEY = "mdv_sort", RECENT_KEY = "mdv_recent", PINS_KEY = "mdv_pins";
 const REPO = { owner: "mattleeart", repo: "claude-playground", branch: "claude/simple-web-server-0x42B" };
 
 /* ---------------- GitHub Contents API ---------------- */
@@ -1655,6 +1655,13 @@ function initViewer() {
     r.unshift(name);
     lsSet(RECENT_KEY, JSON.stringify(r.slice(0, 30)));
   }
+  function getPins() { try { return JSON.parse(lsGet(PINS_KEY, "[]")) || []; } catch (_) { return []; } }
+  function togglePin(name) {
+    let p = getPins();
+    p = p.includes(name) ? p.filter((x) => x !== name) : [name, ...p];
+    lsSet(PINS_KEY, JSON.stringify(p));
+    buildList(); setActive(currentDoc);
+  }
   function sortedFiles() {
     const mode = lsGet(SORT_KEY, "name");
     const arr = files.slice();
@@ -1669,7 +1676,11 @@ function initViewer() {
         return ai - bi;
       });
     } else arr.sort((a, b) => a.name.localeCompare(b.name));
-    return arr;
+    // promote pinned to the top, in pin order
+    const pins = getPins();
+    const pinned = pins.map((n) => arr.find((f) => f.name === n)).filter(Boolean);
+    const rest = arr.filter((f) => !pins.includes(f.name));
+    return [...pinned, ...rest];
   }
   function buildList() {
     list.innerHTML = "";
@@ -1681,6 +1692,7 @@ function initViewer() {
       list.appendChild(banner);
     }
     const recent = getRecent();
+    const pins = getPins();
     sortedFiles()
       .filter((f) => !activeTag || (f.tags && f.tags.includes(activeTag)))
       .forEach((f) => {
@@ -1692,8 +1704,12 @@ function initViewer() {
         const tagsHtml = f.tags && f.tags.length
           ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
         const rt = f.readingMin ? " · ⏱️" + f.readingMin + "분" : "";
-        li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}${rt}</span>${tagsHtml}`;
+        const isPinned = pins.includes(f.name);
+        const pinHtml = `<button class="pin-btn${isPinned ? " on" : ""}" data-pin="${escapeHtml(f.name)}" aria-label="${isPinned ? "고정 해제" : "고정"}">${isPinned ? "★" : "☆"}</button>`;
+        li.innerHTML = `${pinHtml}${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}${rt}</span>${tagsHtml}`;
         li.addEventListener("click", (ev) => {
+          const pinEl = ev.target.closest(".pin-btn");
+          if (pinEl) { ev.stopPropagation(); togglePin(pinEl.dataset.pin); return; }
           const tagEl = ev.target.closest(".file-tag");
           if (tagEl) { ev.stopPropagation(); activeTag = tagEl.dataset.tag; buildList(); return; }
           openFile(f.name);
