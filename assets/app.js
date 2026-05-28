@@ -588,6 +588,11 @@ function initViewer() {
     editingState = null;
     document.body.classList.remove("editing");
     editorEl.hidden = true; content.hidden = false;
+    // reset preview mode
+    if (editorPreview) editorPreview.hidden = true;
+    if (editorTextarea) editorTextarea.hidden = false;
+    const pBtn = editorToolbar && editorToolbar.querySelector('[data-action="preview"]');
+    if (pBtn) pBtn.classList.remove("on");
     setEditorStatus("");
   }
 
@@ -644,6 +649,116 @@ function initViewer() {
   });
   window.addEventListener("beforeunload", (e) => {
     if (editingState && editorTextarea.value !== editingState.original) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  /* ---- formatting toolbar + preview ---- */
+  const editorToolbar = document.getElementById("editor-toolbar");
+  const editorPreview = document.getElementById("editor-preview");
+  function selRange() {
+    return { s: editorTextarea.selectionStart, e: editorTextarea.selectionEnd, v: editorTextarea.value };
+  }
+  function setSel(s, e) {
+    editorTextarea.focus();
+    editorTextarea.setSelectionRange(s, e == null ? s : e);
+  }
+  function dispatchInput() { editorTextarea.dispatchEvent(new Event("input", { bubbles: true })); }
+  function applyWrap(prefix, suffix, placeholder) {
+    const { s, e, v } = selRange();
+    let sel = v.slice(s, e);
+    if (!sel) sel = placeholder || "";
+    const replaced = prefix + sel + suffix;
+    editorTextarea.value = v.slice(0, s) + replaced + v.slice(e);
+    const newS = s + prefix.length;
+    setSel(newS, newS + sel.length);
+    dispatchInput();
+  }
+  function applyLinePrefix(prefix) {
+    const { s, e, v } = selRange();
+    const ls = v.lastIndexOf("\n", s - 1) + 1;
+    let le = v.indexOf("\n", e); if (le < 0) le = v.length;
+    const block = v.slice(ls, le) || prefix.trim().replace(/\s.*$/, "") + " 새 항목";
+    const transformed = block.split("\n").map((line) => prefix + line).join("\n");
+    editorTextarea.value = v.slice(0, ls) + transformed + v.slice(le);
+    setSel(ls, ls + transformed.length);
+    dispatchInput();
+  }
+  function applyInsert(text) {
+    const { s, e, v } = selRange();
+    editorTextarea.value = v.slice(0, s) + text + v.slice(e);
+    setSel(s + text.length);
+    dispatchInput();
+  }
+
+  async function renderPreview() {
+    const raw = editorTextarea.value;
+    const { body } = parseFrontmatter(raw);
+    let text = body;
+    if (/\$\$?[^\s$]/.test(text)) { try { await loadKatex(); } catch (_) {} }
+    if (/:[a-z0-9_+-]+:/i.test(text)) { try { await loadEmoji(); } catch (_) {} }
+    text = preprocessFootnotes(text);
+    editorPreview.innerHTML = DOMPurify.sanitize(marked.parse(text), {
+      USE_PROFILES: { html: true, svg: true, mathMl: true }, ADD_ATTR: ["target"],
+    });
+    enhance(editorPreview);
+  }
+  function togglePreview() {
+    const btn = editorToolbar.querySelector('[data-action="preview"]');
+    if (editorPreview.hidden) {
+      editorPreview.hidden = false; editorTextarea.hidden = true;
+      btn.classList.add("on"); renderPreview();
+    } else {
+      editorPreview.hidden = true; editorTextarea.hidden = false;
+      btn.classList.remove("on"); editorTextarea.focus();
+    }
+  }
+
+  editorToolbar.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tb"); if (!btn) return;
+    const a = btn.dataset.action;
+    if (a === "bold") applyWrap("**", "**", "굵게");
+    else if (a === "italic") applyWrap("*", "*", "기울임");
+    else if (a === "strike") applyWrap("~~", "~~", "취소선");
+    else if (a === "code") applyWrap("`", "`", "code");
+    else if (a === "heading") applyLinePrefix("## ");
+    else if (a === "quote") applyLinePrefix("> ");
+    else if (a === "ul") applyLinePrefix("- ");
+    else if (a === "ol") applyLinePrefix("1. ");
+    else if (a === "task") applyLinePrefix("- [ ] ");
+    else if (a === "hr") applyInsert("\n\n---\n\n");
+    else if (a === "codeblock") {
+      const { s, e: ee, v } = selRange();
+      const sel = v.slice(s, ee) || "코드";
+      const block = "\n```\n" + sel + "\n```\n";
+      editorTextarea.value = v.slice(0, s) + block + v.slice(ee);
+      setSel(s + 5, s + 5 + sel.length);
+      dispatchInput();
+    } else if (a === "link") {
+      const url = prompt("URL을 입력하세요", "https://");
+      if (url) applyWrap("[", "](" + url + ")", "텍스트");
+    } else if (a === "image") {
+      const url = prompt("이미지 URL", "https://");
+      if (url) applyInsert("![설명](" + url + ")");
+    } else if (a === "preview") togglePreview();
+  });
+
+  editorTextarea.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Tab") return;
+    ev.preventDefault();
+    const { s, e: end, v } = selRange();
+    if (s === end) {
+      editorTextarea.value = v.slice(0, s) + "  " + v.slice(end);
+      setSel(s + 2);
+    } else {
+      const ls = v.lastIndexOf("\n", s - 1) + 1;
+      let le = v.indexOf("\n", end); if (le < 0) le = v.length;
+      const block = v.slice(ls, le);
+      const transformed = ev.shiftKey
+        ? block.split("\n").map((l) => l.replace(/^ {1,2}/, "")).join("\n")
+        : block.split("\n").map((l) => "  " + l).join("\n");
+      editorTextarea.value = v.slice(0, ls) + transformed + v.slice(le);
+      setSel(ls, ls + transformed.length);
+    }
+    dispatchInput();
   });
 
   let pendingEditedText = null;

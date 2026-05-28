@@ -90,7 +90,27 @@
     </main>
 
     <section id="editor" class="editor" hidden aria-label="마크다운 편집기">
-      <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+      <div class="editor-toolbar" id="editor-toolbar" role="toolbar" aria-label="서식">
+        <button class="tb" data-action="heading" title="제목" aria-label="제목">H</button>
+        <button class="tb" data-action="bold" title="굵게" aria-label="굵게"><b>B</b></button>
+        <button class="tb" data-action="italic" title="기울임" aria-label="기울임"><i>I</i></button>
+        <button class="tb" data-action="strike" title="취소선" aria-label="취소선"><s>S</s></button>
+        <button class="tb" data-action="code" title="인라인 코드" aria-label="인라인 코드">&lt;/&gt;</button>
+        <button class="tb" data-action="codeblock" title="코드 블록" aria-label="코드 블록">{ }</button>
+        <button class="tb" data-action="link" title="링크" aria-label="링크">🔗</button>
+        <button class="tb" data-action="image" title="이미지" aria-label="이미지">🖼</button>
+        <button class="tb" data-action="quote" title="인용" aria-label="인용">❝</button>
+        <button class="tb" data-action="ul" title="목록" aria-label="목록">•</button>
+        <button class="tb" data-action="ol" title="번호 목록" aria-label="번호 목록">1.</button>
+        <button class="tb" data-action="task" title="체크리스트" aria-label="체크리스트">☐</button>
+        <button class="tb" data-action="hr" title="구분선" aria-label="구분선">—</button>
+        <span class="tb-sep"></span>
+        <button class="tb" data-action="preview" title="미리보기" aria-label="미리보기">👁</button>
+      </div>
+      <div class="editor-stack">
+        <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+        <div id="editor-preview" class="editor-preview markdown-body" hidden></div>
+      </div>
       <div id="editor-status" class="editor-status"></div>
     </section>
 

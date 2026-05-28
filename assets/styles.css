@@ -136,6 +136,23 @@ body.editing .to-top, body.editing .progress { display: none !important; }
   display: flex; flex-direction: column;
   background: var(--bg); z-index: 32;
 }
+.editor-toolbar {
+  display: flex; align-items: center; gap: 2px;
+  padding: 6px 8px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.editor-toolbar::-webkit-scrollbar { display: none; }
+.tb {
+  flex: 0 0 auto;
+  min-width: 36px; height: 34px; padding: 0 8px;
+  border: 1px solid transparent; border-radius: 7px;
+  background: transparent; color: var(--fg);
+  font: 600 .92rem system-ui; cursor: pointer;
+}
+.tb:active, .tb.on { background: var(--border); }
+.tb-sep { flex: 0 0 auto; width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+.editor-stack { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .editor-textarea {
   flex: 1; width: 100%;
   border: none; outline: none;
@@ -143,6 +160,10 @@ body.editing .to-top, body.editing .progress { display: none !important; }
   padding: 14px max(14px, env(safe-area-inset-left));
   font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   resize: none; tab-size: 2; -moz-tab-size: 2;
+}
+.editor-preview {
+  flex: 1; overflow-y: auto;
+  padding: 14px max(14px, env(safe-area-inset-left));
 }
 .editor-status {
   padding: 6px 14px; font-size: .76rem; color: var(--muted);
