@@ -372,6 +372,24 @@ function initViewer() {
     loadAllTags();
   }
 
+  /* ---- drawer tabs (문서 / 목차) ---- */
+  const TAB_KEY = "mdv_drawer_tab";
+  function activateDrawerTab(name) {
+    document.querySelectorAll(".drawer-tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("on", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    document.querySelectorAll(".drawer-panel").forEach((p) => {
+      p.hidden = p.dataset.panel !== name;
+    });
+    lsSet(TAB_KEY, name);
+  }
+  document.querySelectorAll(".drawer-tab").forEach((t) => {
+    t.addEventListener("click", () => activateDrawerTab(t.dataset.tab));
+  });
+  activateDrawerTab(lsGet(TAB_KEY, "files"));
+
   let tagsPromise = null;
   function loadAllTags() {
     if (tagsPromise) return tagsPromise;
@@ -481,7 +499,6 @@ function initViewer() {
   /* ---- search: title + full text ---- */
   const filter = document.getElementById("filter");
   const searchResults = document.getElementById("search-results");
-  const tocHeadEl = () => document.getElementById("toc-head");
   const docText = {};
   let allDocsPromise = null;
   let pendingSearch = null;
@@ -498,8 +515,6 @@ function initViewer() {
   function showLists(normal) {
     list.hidden = !normal;
     searchResults.hidden = normal;
-    const th = tocHeadEl(); if (th) th.hidden = !normal || th.dataset.empty === "1";
-    tocEl.hidden = !normal;
   }
   function snippet(text, q) {
     const i = text.toLowerCase().indexOf(q.toLowerCase());
@@ -1666,7 +1681,8 @@ function initViewer() {
 
   /* ---- TOC + scroll memory ---- */
   const tocEl = document.getElementById("toc");
-  const tocHead = document.getElementById("toc-head");
+  const tocEmpty = document.getElementById("toc-empty");
+  const tocDocTitle = document.getElementById("toc-doc-title");
   let currentDoc = null;
   let tocObserver = null;
   let saveTimer = 0;
@@ -1683,10 +1699,10 @@ function initViewer() {
   function buildToc() {
     tocEl.innerHTML = "";
     if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
+    if (tocDocTitle) tocDocTitle.textContent = (titleEl && titleEl.textContent) || "목차";
     const heads = Array.from(content.querySelectorAll("h2, h3"));
-    if (!heads.length) { tocHead.hidden = true; tocHead.dataset.empty = "1"; return; }
-    tocHead.dataset.empty = "0";
-    tocHead.hidden = false;
+    if (!heads.length) { if (tocEmpty) tocEmpty.hidden = false; return; }
+    if (tocEmpty) tocEmpty.hidden = true;
     const seen = {};
     const linkById = {};
     heads.forEach((h) => {
@@ -1974,7 +1990,8 @@ function initViewer() {
       }
     } catch (e) {
       content.innerHTML = '<p class="placeholder">문서를 불러오지 못했습니다.</p>';
-      tocHead.hidden = true; tocEl.innerHTML = "";
+      tocEl.innerHTML = "";
+      if (tocEmpty) tocEmpty.hidden = false;
     }
     currentDoc = file.name;
     lsSet(LAST_KEY, file.name);

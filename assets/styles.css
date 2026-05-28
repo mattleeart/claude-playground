@@ -389,11 +389,32 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   overflow-y: auto;
 }
 .drawer.open { transform: translateX(0); }
+.drawer-tabs {
+  display: flex; gap: 4px;
+  padding: 8px 8px 0;
+  position: sticky; top: 0;
+  background: var(--bg); z-index: 1;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-tab {
+  flex: 1; padding: 10px 8px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font-size: .88rem; font-weight: 600;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.drawer-tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.drawer-tab:active { background: var(--surface); }
+.drawer-panel { display: block; }
+.drawer-panel[hidden] { display: none !important; }
 .drawer-head {
   display: flex; align-items: center; justify-content: space-between;
   font-size: .8rem; font-weight: 700; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
   padding: 16px 16px 8px;
+}
+.toc-empty {
+  color: var(--muted); font-size: .88rem; padding: 24px 16px; text-align: center;
 }
 .drawer-stat {
   padding: 14px 16px 0; font-size: .76rem; color: var(--muted);

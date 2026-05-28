@@ -114,22 +114,33 @@
 
     <div id="backdrop" class="backdrop" hidden></div>
 
-    <nav id="drawer" class="drawer" aria-label="문서 목록">
-      <div id="drawer-stat" class="drawer-stat" hidden></div>
-      <div class="drawer-head"><span>문서 목록</span>
-        <select id="sort-select" class="sort-select" aria-label="정렬 기준">
-          <option value="name">이름순</option>
-          <option value="size">크기순</option>
-          <option value="recent">최근순</option>
-          <option value="date">날짜순</option>
-        </select>
-        <button id="new-doc" class="drawer-action" aria-label="새 문서" title="새 문서">＋</button>
+    <nav id="drawer" class="drawer" aria-label="탐색">
+      <div class="drawer-tabs" role="tablist">
+        <button class="drawer-tab on" data-tab="files" role="tab" aria-selected="true">📄 문서</button>
+        <button class="drawer-tab" data-tab="toc" role="tab" aria-selected="false">📑 목차</button>
       </div>
-      <input id="filter" class="filter" type="search" placeholder="제목·본문 검색…" aria-label="문서 검색" />
-      <ul id="file-list" class="file-list"></ul>
-      <ul id="search-results" class="file-list" hidden></ul>
-      <div id="toc-head" class="drawer-head" hidden>목차</div>
-      <ul id="toc" class="toc"></ul>
+
+      <div class="drawer-panel" data-panel="files">
+        <div id="drawer-stat" class="drawer-stat" hidden></div>
+        <div class="drawer-head"><span class="drawer-head-title">문서 목록</span>
+          <select id="sort-select" class="sort-select" aria-label="정렬 기준">
+            <option value="name">이름순</option>
+            <option value="size">크기순</option>
+            <option value="recent">최근순</option>
+            <option value="date">날짜순</option>
+          </select>
+          <button id="new-doc" class="drawer-action" aria-label="새 문서" title="새 문서">＋</button>
+        </div>
+        <input id="filter" class="filter" type="search" placeholder="제목·본문 검색…" aria-label="문서 검색" />
+        <ul id="file-list" class="file-list"></ul>
+        <ul id="search-results" class="file-list" hidden></ul>
+      </div>
+
+      <div class="drawer-panel" data-panel="toc" hidden>
+        <div class="drawer-head"><span class="drawer-head-title" id="toc-doc-title">목차</span></div>
+        <ul id="toc" class="toc"></ul>
+        <div id="toc-empty" class="toc-empty" hidden>이 문서에는 표시할 제목이 없습니다.</div>
+      </div>
     </nav>
 
     <main id="content" class="content markdown-body">
