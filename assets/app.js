@@ -788,7 +788,8 @@ function initViewer() {
       const name = editingState.name;
       pendingEditedText = { name, text };
       exitEditMode(false);
-      toast("저장됨 — 라이브 반영은 약 1분");
+      const ts = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+      toast(ts + " 저장됨 — 라이브 반영 약 1분");
       openFile(name);
     } catch (e) {
       // refresh sha so retry succeeds even after concurrent edits
