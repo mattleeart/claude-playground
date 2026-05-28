@@ -359,24 +359,49 @@ function initViewer() {
     loadAllTags();
   }
 
-  let tagsLoaded = false;
-  async function loadAllTags() {
-    if (tagsLoaded) return;
-    tagsLoaded = true;
-    try { await ensureAllDocs(); } catch (_) {}
-    let any = false;
-    files.forEach((f) => {
-      const text = docText[f.name]; if (!text) return;
-      const { meta, body } = parseFrontmatter(text);
-      if (meta.tags) {
-        f.tags = Array.isArray(meta.tags) ? meta.tags : [meta.tags];
-        any = true;
-      }
-      f.readingMin = readingStats(body).minutes;
-      any = true;
+  let tagsPromise = null;
+  function loadAllTags() {
+    if (tagsPromise) return tagsPromise;
+    tagsPromise = (async () => {
+      try { await ensureAllDocs(); } catch (_) {}
+      files.forEach((f) => {
+        const text = docText[f.name]; if (!text) return;
+        const { meta, body } = parseFrontmatter(text);
+        if (meta.tags) f.tags = Array.isArray(meta.tags) ? meta.tags : [meta.tags];
+        f.readingMin = readingStats(body).minutes;
+      });
+      buildList();
+      updateDrawerStat();
+      if (currentDoc) appendRelated();
+    })();
+    return tagsPromise;
+  }
+
+  function appendRelated() {
+    if (!currentDoc) return;
+    const me = files.find((f) => f.name === currentDoc); if (!me) return;
+    const myTags = me.tags || [];
+    const meText = docText[currentDoc] || "";
+    const related = files.filter((o) => {
+      if (o.name === currentDoc) return false;
+      const sharedTags = (o.tags || []).some((t) => myTags.includes(t));
+      const mentionsMe = docText[o.name] && docText[o.name].includes(currentDoc);
+      const meMentionsThem = meText && meText.includes(o.name);
+      return sharedTags || mentionsMe || meMentionsThem;
     });
-    if (any) buildList();
-    updateDrawerStat();
+    content.querySelectorAll(".related-docs").forEach((n) => n.remove());
+    if (!related.length) return;
+    const section = document.createElement("section");
+    section.className = "related-docs";
+    section.innerHTML = "<h3>관련 문서</h3><ul>" + related.slice(0, 6).map((r) => {
+      const why = (r.tags || []).filter((t) => myTags.includes(t));
+      const whyHtml = why.length ? '<span class="related-why">' + why.map((t) => "#" + escapeHtml(t)).join(" ") + "</span>" : "";
+      return '<li><a data-name="' + escapeHtml(r.name) + '">' + escapeHtml(r.title || r.name) + "</a>" + whyHtml + "</li>";
+    }).join("") + "</ul>";
+    section.querySelectorAll("a[data-name]").forEach((a) => {
+      a.addEventListener("click", (e) => { e.preventDefault(); openFile(a.dataset.name); });
+    });
+    content.appendChild(section);
   }
   function updateDrawerStat() {
     const el = document.getElementById("drawer-stat"); if (!el) return;
@@ -1368,6 +1393,16 @@ function initViewer() {
       }
       if (k === "d") { ev.preventDefault(); duplicateLine(); return; }
       if (k === "/") { ev.preventDefault(); toggleComment(); return; }
+      if (k >= "1" && k <= "4") {
+        ev.preventDefault();
+        const lvl = parseInt(k, 10);
+        const { ls, le, v } = getLineRange();
+        const line = v.slice(ls, le);
+        const stripped = line.replace(/^#{1,6}\s*/, "");
+        const prefix = "#".repeat(lvl) + " ";
+        insertAt(ls, le, prefix + stripped, ls + prefix.length, ls + prefix.length + stripped.length);
+        return;
+      }
     }
     if (BRACKETS[ev.key]) {
       const { s, e } = selRange();
@@ -1757,6 +1792,7 @@ function initViewer() {
     currentDoc = file.name;
     lsSet(LAST_KEY, file.name);
     pushRecent(file.name);
+    appendRelated();
     onScroll();
     const hash = "#" + encodeURIComponent(file.name);
     if (location.hash !== hash) history.replaceState(null, "", hash);
@@ -1867,6 +1903,8 @@ function initViewer() {
     const last = lsGet(LAST_KEY, null);
     const initial = currentFromHash() || (last && files.some((f) => f.name === last) ? last : files[0].name);
     openFile(initial);
+    // populate tags + related docs in the background
+    setTimeout(() => loadAllTags(), 200);
   })();
 }
 

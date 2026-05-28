@@ -1,3 +1,7 @@
+---
+tags: [markdown, gfm]
+---
+
 # GFM 종합 샘플
 
 GitHub Flavored Markdown의 다양한 요소를 한 화면에서 확인합니다.
