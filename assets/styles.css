@@ -113,6 +113,48 @@ button { font: inherit; }
 }
 .to-top.show { opacity: .92; transform: translateY(0); pointer-events: auto; }
 
+/* ---------- Token field ---------- */
+.token-input {
+  flex: 1; min-width: 0;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--fg);
+  padding: 7px 10px; font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.settings-token { align-items: stretch; gap: 8px; }
+.settings-token-actions { gap: 8px; }
+.settings-hint { color: var(--muted); font-size: .72rem; flex: 1; }
+
+/* ---------- Edit mode ---------- */
+body.editing .read-only { display: none !important; }
+body:not(.editing) .edit-only { display: none !important; }
+body.editing .to-top, body.editing .progress { display: none !important; }
+
+.editor {
+  position: fixed;
+  top: calc(var(--topbar-h) + env(safe-area-inset-top));
+  left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg); z-index: 32;
+}
+.editor-textarea {
+  flex: 1; width: 100%;
+  border: none; outline: none;
+  background: var(--bg); color: var(--fg);
+  padding: 14px max(14px, env(safe-area-inset-left));
+  font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: none; tab-size: 2; -moz-tab-size: 2;
+}
+.editor-status {
+  padding: 6px 14px; font-size: .76rem; color: var(--muted);
+  border-top: 1px solid var(--border); background: var(--surface);
+  min-height: 1.6em;
+}
+.editor-status.error { color: #ef4444; }
+.editor-status.ok { color: #10b981; }
+@media (min-width: 900px) {
+  .editor { left: var(--drawer-w); }
+}
+
 .toast {
   position: fixed; z-index: 210;
   left: 50%; bottom: calc(28px + env(safe-area-inset-bottom));

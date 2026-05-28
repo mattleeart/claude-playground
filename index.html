@@ -30,10 +30,13 @@
   <!-- App -->
   <div id="app" class="app" hidden>
     <header class="topbar">
-      <button id="menu-btn" class="icon-btn" aria-label="목록 열기">☰</button>
+      <button id="menu-btn" class="icon-btn read-only" aria-label="목록 열기">☰</button>
+      <button id="cancel-edit" class="icon-btn edit-only" aria-label="편집 취소">✕</button>
       <h1 id="doc-title" class="topbar-title">문서</h1>
-      <button id="settings-btn" class="icon-btn" aria-label="설정">⚙️</button>
-      <button id="lock-btn" class="icon-btn" aria-label="잠그기">🔒</button>
+      <button id="save-edit" class="icon-btn edit-only" aria-label="저장">💾</button>
+      <button id="edit-btn" class="icon-btn read-only" aria-label="편집">✏️</button>
+      <button id="settings-btn" class="icon-btn read-only" aria-label="설정">⚙️</button>
+      <button id="lock-btn" class="icon-btn read-only" aria-label="잠그기">🔒</button>
       <div id="progress" class="progress"></div>
     </header>
 
@@ -61,6 +64,14 @@
           <button id="copylink-btn" class="seg-btn">링크 복사</button>
         </div>
       </div>
+      <div class="settings-row settings-token">
+        <label class="settings-label" for="gh-token">GitHub 토큰</label>
+        <input id="gh-token" class="token-input" type="password" autocomplete="off" placeholder="ghp_… (편집 저장용)" />
+      </div>
+      <div class="settings-row settings-token-actions">
+        <small class="settings-hint">repo contents:write 권한. 이 기기에만 저장됩니다.</small>
+        <button id="gh-token-clear" class="seg-btn">삭제</button>
+      </div>
     </div>
 
     <div id="backdrop" class="backdrop" hidden></div>
@@ -77,6 +88,11 @@
     <main id="content" class="content markdown-body">
       <p class="placeholder">문서를 불러오는 중…</p>
     </main>
+
+    <section id="editor" class="editor" hidden aria-label="마크다운 편집기">
+      <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+      <div id="editor-status" class="editor-status"></div>
+    </section>
 
     <button id="to-top" class="to-top" aria-label="맨 위로" hidden>↑</button>
   </div>

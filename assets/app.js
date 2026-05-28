@@ -7,6 +7,51 @@ const AUTH = { salt: "074566f4abd1ce3f6696046e6d584f2a", iterations: 150000, has
 
 const SESSION_KEY = "mdv_unlocked";
 const THEME_KEY = "mdv_theme", SCALE_KEY = "mdv_scale", LAST_KEY = "mdv_last", POS_PREFIX = "mdv_pos_";
+const TOKEN_KEY = "mdv_gh_token", DRAFT_PREFIX = "mdv_draft_";
+const REPO = { owner: "mattleeart", repo: "claude-playground", branch: "claude/simple-web-server-0x42B" };
+
+/* ---------------- GitHub Contents API ---------------- */
+function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (_) { return ""; } }
+function b64encodeUtf8(s) {
+  const bytes = new TextEncoder().encode(s);
+  let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64decodeUtf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function ghHeaders(needAuth) {
+  const h = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  const t = getToken();
+  if (needAuth && !t) throw new Error("GitHub 토큰이 설정되지 않았습니다");
+  if (t) h.Authorization = "Bearer " + t;
+  return h;
+}
+function ghContentsUrl(path) {
+  return `https://api.github.com/repos/${REPO.owner}/${REPO.repo}/contents/${path}`;
+}
+async function ghGet(path) {
+  const r = await fetch(ghContentsUrl(path) + "?ref=" + encodeURIComponent(REPO.branch), { headers: ghHeaders(false), cache: "no-store" });
+  if (!r.ok) throw new Error("GET " + r.status);
+  const j = await r.json();
+  return { sha: j.sha, text: b64decodeUtf8(j.content || "") };
+}
+async function ghPut(path, text, sha, message) {
+  const body = { message, content: b64encodeUtf8(text), branch: REPO.branch };
+  if (sha) body.sha = sha;
+  const r = await fetch(ghContentsUrl(path), { method: "PUT", headers: { ...ghHeaders(true), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error("PUT " + r.status + " " + t.slice(0, 200)); }
+  const j = await r.json();
+  return { sha: j.content && j.content.sha };
+}
+async function ghDelete(path, sha, message) {
+  const r = await fetch(ghContentsUrl(path), { method: "DELETE", headers: { ...ghHeaders(true), "Content-Type": "application/json" }, body: JSON.stringify({ message, sha, branch: REPO.branch }) });
+  if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error("DELETE " + r.status + " " + t.slice(0, 200)); }
+  return true;
+}
 
 /* ---------------- settings (theme + font) ---------------- */
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } }
@@ -489,6 +534,120 @@ function initViewer() {
   });
   document.getElementById("copylink-btn").addEventListener("click", () => { settings.hidden = true; copyText(location.href); });
 
+  /* ---- GitHub token field ---- */
+  const tokenInput = document.getElementById("gh-token");
+  const tokenClearBtn = document.getElementById("gh-token-clear");
+  tokenInput.value = getToken();
+  tokenInput.addEventListener("input", () => { lsSet(TOKEN_KEY, tokenInput.value.trim()); });
+  tokenClearBtn.addEventListener("click", () => { tokenInput.value = ""; lsSet(TOKEN_KEY, ""); toast("토큰을 삭제했습니다"); });
+
+  /* ---- editor ---- */
+  const editBtn = document.getElementById("edit-btn");
+  const cancelEditBtn = document.getElementById("cancel-edit");
+  const saveEditBtn = document.getElementById("save-edit");
+  const editorEl = document.getElementById("editor");
+  const editorTextarea = document.getElementById("editor-textarea");
+  const editorStatus = document.getElementById("editor-status");
+  let editingState = null; // { name, path, sha, original }
+  let draftTimer = 0;
+
+  function setEditorStatus(msg, kind) {
+    editorStatus.textContent = msg || "";
+    editorStatus.className = "editor-status" + (kind ? " " + kind : "");
+  }
+
+  async function enterEditMode() {
+    if (!currentDoc) { toast("문서가 선택되지 않았습니다"); return; }
+    const file = files.find((f) => f.name === currentDoc);
+    if (!file) return;
+    document.body.classList.add("editing");
+    editorEl.hidden = false; content.hidden = true;
+    editorTextarea.value = "";
+    setEditorStatus("본문을 불러오는 중…");
+    try {
+      const res = await fetch(file.path + "?cb=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+      editingState = { name: file.name, path: file.path, sha: null, original: text };
+      const draftRaw = lsGet(DRAFT_PREFIX + file.name, "");
+      if (draftRaw && draftRaw !== text) {
+        if (confirm("저장되지 않은 임시 변경사항이 있습니다. 복원할까요?")) editorTextarea.value = draftRaw;
+        else { editorTextarea.value = text; lsSet(DRAFT_PREFIX + file.name, ""); }
+      } else {
+        editorTextarea.value = text;
+      }
+      setEditorStatus("준비됨. 저장하려면 💾 또는 Ctrl/Cmd+S.", "");
+      editorTextarea.focus();
+    } catch (e) {
+      setEditorStatus("불러오기 실패: " + e.message, "error");
+    }
+  }
+
+  function exitEditMode(discardDraft) {
+    if (editingState && discardDraft) lsSet(DRAFT_PREFIX + editingState.name, "");
+    editingState = null;
+    document.body.classList.remove("editing");
+    editorEl.hidden = true; content.hidden = false;
+    setEditorStatus("");
+  }
+
+  async function saveEdit() {
+    if (!editingState) return;
+    if (!getToken()) {
+      setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0);
+      setEditorStatus("저장하려면 GitHub 토큰을 먼저 입력하세요", "error");
+      return;
+    }
+    const text = editorTextarea.value;
+    if (text === editingState.original) { setEditorStatus("변경사항이 없습니다", ""); return; }
+    setEditorStatus("저장 중…");
+    saveEditBtn.disabled = true;
+    try {
+      if (!editingState.sha) {
+        const got = await ghGet(editingState.path);
+        editingState.sha = got.sha;
+      }
+      const { sha } = await ghPut(editingState.path, text, editingState.sha, "docs: update " + editingState.name);
+      editingState.sha = sha;
+      editingState.original = text;
+      lsSet(DRAFT_PREFIX + editingState.name, "");
+      docText[editingState.name] = text;
+      const name = editingState.name;
+      pendingEditedText = { name, text };
+      exitEditMode(false);
+      toast("저장됨 — 라이브 반영은 약 1분");
+      openFile(name);
+    } catch (e) {
+      setEditorStatus("저장 실패: " + e.message, "error");
+    } finally {
+      saveEditBtn.disabled = false;
+    }
+  }
+
+  editBtn.addEventListener("click", enterEditMode);
+  cancelEditBtn.addEventListener("click", () => {
+    if (editingState && editorTextarea.value !== editingState.original) {
+      if (!confirm("변경사항이 저장되지 않았습니다. 취소할까요?")) return;
+    }
+    exitEditMode(true);
+  });
+  saveEditBtn.addEventListener("click", saveEdit);
+  editorTextarea.addEventListener("input", () => {
+    if (!editingState) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => lsSet(DRAFT_PREFIX + editingState.name, editorTextarea.value), 600);
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S") && document.body.classList.contains("editing")) {
+      e.preventDefault(); saveEdit();
+    }
+  });
+  window.addEventListener("beforeunload", (e) => {
+    if (editingState && editorTextarea.value !== editingState.original) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  let pendingEditedText = null;
+
   /* ---- Esc to dismiss overlays ---- */
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
@@ -796,9 +955,14 @@ function initViewer() {
     content.innerHTML = '<p class="placeholder">불러오는 중…</p>';
     closeDrawer();
     try {
-      const res = await fetch(file.path, { cache: "no-cache" });
-      if (!res.ok) throw new Error(res.status);
-      const raw = await res.text();
+      let raw;
+      if (pendingEditedText && pendingEditedText.name === file.name) {
+        raw = pendingEditedText.text; pendingEditedText = null;
+      } else {
+        const res = await fetch(file.path, { cache: "no-cache" });
+        if (!res.ok) throw new Error(res.status);
+        raw = await res.text();
+      }
       const { meta, body } = parseFrontmatter(raw);
       if (meta.title) titleEl.textContent = meta.title;
       let text = body;
