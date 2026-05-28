@@ -1260,8 +1260,56 @@ function initViewer() {
     }
   }
 
+  function getLineRange() {
+    const v = editorTextarea.value;
+    const s = editorTextarea.selectionStart, e = editorTextarea.selectionEnd;
+    const ls = v.lastIndexOf("\n", s - 1) + 1;
+    let le = v.indexOf("\n", e); if (le < 0) le = v.length;
+    return { ls, le, s, e, v };
+  }
+  function moveLines(dir) {
+    const { ls, le, s, e, v } = getLineRange();
+    if (dir < 0) {
+      if (ls === 0) return;
+      const prevLs = v.lastIndexOf("\n", ls - 2) + 1;
+      const prev = v.slice(prevLs, ls - 1);
+      const cur = v.slice(ls, le);
+      const replacement = cur + "\n" + prev;
+      insertAt(prevLs, le, replacement, prevLs + (s - ls), prevLs + (e - ls));
+    } else {
+      if (le === v.length) return;
+      let nextLe = v.indexOf("\n", le + 1); if (nextLe < 0) nextLe = v.length;
+      const next = v.slice(le + 1, nextLe);
+      const cur = v.slice(ls, le);
+      const replacement = next + "\n" + cur;
+      const newCurStart = ls + next.length + 1;
+      insertAt(ls, nextLe, replacement, newCurStart + (s - ls), newCurStart + (e - ls));
+    }
+  }
+  function duplicateLine() {
+    const { ls, le, v } = getLineRange();
+    const block = v.slice(ls, le);
+    insertAt(le, le, "\n" + block, le + 1 + block.length);
+  }
+  function toggleComment() {
+    const { ls, le, v } = getLineRange();
+    const block = v.slice(ls, le);
+    let next, finalEnd;
+    if (/^\s*<!--[\s\S]*-->\s*$/.test(block)) {
+      next = block.replace(/^\s*<!--\s?/, "").replace(/\s?-->\s*$/, "");
+    } else {
+      next = "<!-- " + block + " -->";
+    }
+    finalEnd = ls + next.length;
+    insertAt(ls, le, next, ls, finalEnd);
+  }
+
   const BRACKETS = { "(": ")", "[": "]", "{": "}", "`": "`", '"': '"', "*": "*", "_": "_" };
   editorTextarea.addEventListener("keydown", (ev) => {
+    // Alt+Up / Alt+Down: move line(s)
+    if (ev.altKey && !ev.metaKey && !ev.ctrlKey && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
+      ev.preventDefault(); moveLines(ev.key === "ArrowUp" ? -1 : 1); return;
+    }
     // Ctrl/Cmd shortcuts for common formatting
     if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && !ev.altKey) {
       const k = ev.key.toLowerCase();
@@ -1273,6 +1321,8 @@ function initViewer() {
         if (url) applyWrap("[", "](" + url + ")", "텍스트");
         return;
       }
+      if (k === "d") { ev.preventDefault(); duplicateLine(); return; }
+      if (k === "/") { ev.preventDefault(); toggleComment(); return; }
     }
     if (BRACKETS[ev.key]) {
       const { s, e } = selRange();
