@@ -1213,6 +1213,9 @@ function initViewer() {
     { id: "hr", label: "구분선", keys: ["hr","divider","구분"], insert: "---\n" },
     { id: "today", label: "오늘 날짜", keys: ["date","today","날짜"], insert: () => new Date().toISOString().slice(0, 10) },
     { id: "now", label: "현재 시각", keys: ["time","now","시각"], insert: () => new Date().toLocaleString("ko-KR") },
+    { id: "tpl-note", label: "템플릿: 메모", keys: ["template","note","메모","tpl"], insert: () => "## 핵심\n\n- \n\n## 상세\n\n" },
+    { id: "tpl-todo", label: "템플릿: 할 일", keys: ["template","todo","할일","tpl"], insert: () => "## 할 일\n\n- [ ] \n- [ ] \n- [ ] \n" },
+    { id: "tpl-journal", label: "템플릿: 일지", keys: ["template","journal","일지","tpl"], insert: () => `## ${new Date().toISOString().slice(0, 10)}\n\n### 오늘 한 일\n\n- \n\n### 내일 할 일\n\n- [ ] \n` },
   ];
 
   let slashStart = -1; // textarea position of the leading "/"
