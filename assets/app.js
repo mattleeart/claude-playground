@@ -814,10 +814,14 @@ function initViewer() {
     else if (a === "task") applyLinePrefix("- [ ] ");
     else if (a === "hr") applyInsert("\n\n---\n\n");
     else if (a === "codeblock") {
+      const last = lsGet("mdv_last_lang", "");
+      const lang = (prompt("언어 (예: javascript, python, rust — 빈칸 가능)", last) || "").trim().toLowerCase();
+      lsSet("mdv_last_lang", lang);
       const { s, e: ee, v } = selRange();
       const sel = v.slice(s, ee) || "코드";
-      const block = "\n```\n" + sel + "\n```\n";
-      insertAt(s, ee, block, s + 5, s + 5 + sel.length);
+      const fence = "\n```" + lang + "\n" + sel + "\n```\n";
+      const caretAt = s + 4 + lang.length + 1; // newline + 3 ticks + lang + newline
+      insertAt(s, ee, fence, caretAt, caretAt + sel.length);
     } else if (a === "link") {
       const url = prompt("URL을 입력하세요", "https://");
       if (url) applyWrap("[", "](" + url + ")", "텍스트");
