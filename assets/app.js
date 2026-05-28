@@ -636,6 +636,16 @@ function initViewer() {
     settings.hidden = true;
     shortcutsPop.hidden = false;
   });
+  const installBtn = document.getElementById("install-pwa");
+  if (_installPrompt) installBtn.hidden = false;
+  installBtn.addEventListener("click", async () => {
+    settings.hidden = true;
+    if (!_installPrompt) { toast("이미 설치되었거나 지원되지 않는 브라우저입니다"); return; }
+    _installPrompt.prompt();
+    await _installPrompt.userChoice;
+    _installPrompt = null;
+    installBtn.hidden = true;
+  });
   document.getElementById("shortcuts-close").addEventListener("click", () => { shortcutsPop.hidden = true; });
   document.addEventListener("click", (e) => {
     if (shortcutsPop.hidden) return;
@@ -2098,6 +2108,14 @@ if ("serviceWorker" in navigator) {
   if (document.readyState === "complete") reg();
   else window.addEventListener("load", reg);
 }
+
+let _installPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  _installPrompt = e;
+  const btn = document.getElementById("install-pwa");
+  if (btn) btn.hidden = false;
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   let unlocked = false;
