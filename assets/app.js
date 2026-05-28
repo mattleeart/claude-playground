@@ -899,6 +899,7 @@ function initViewer() {
     else if (a === "outline") toggleOutline();
     else if (a === "history") toggleHistory();
     else if (a === "diff") showDiff();
+    else if (a === "format") formatMarkdown();
     else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
   });
@@ -1045,6 +1046,20 @@ function initViewer() {
     if (e.target.closest && e.target.closest('[data-action="history"]')) return;
     historyPop.hidden = true;
   });
+
+  function formatMarkdown() {
+    const v = editorTextarea.value;
+    const next = v
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/\s+$/, "\n");
+    if (next === v) { toast("이미 정돈되어 있습니다"); return; }
+    editorTextarea.focus();
+    editorTextarea.setSelectionRange(0, v.length);
+    const ok = document.execCommand && document.execCommand("insertText", false, next);
+    if (!ok) { editorTextarea.value = next; dispatchInput(); }
+    toast("정돈 완료");
+  }
 
   /* ---- diff viewer (current edits vs original) ---- */
   function lineDiff(a, b) {
