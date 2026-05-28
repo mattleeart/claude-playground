@@ -617,6 +617,7 @@ function initViewer() {
       editingState.original = text;
       lsSet(DRAFT_PREFIX + editingState.name, "");
       docText[editingState.name] = text;
+      saveEditBtn.classList.remove("has-changes");
       const name = editingState.name;
       pendingEditedText = { name, text };
       exitEditMode(false);
@@ -639,6 +640,7 @@ function initViewer() {
   saveEditBtn.addEventListener("click", saveEdit);
   editorTextarea.addEventListener("input", () => {
     if (!editingState) return;
+    saveEditBtn.classList.toggle("has-changes", editorTextarea.value !== editingState.original);
     clearTimeout(draftTimer);
     draftTimer = setTimeout(() => lsSet(DRAFT_PREFIX + editingState.name, editorTextarea.value), 600);
   });
@@ -662,15 +664,22 @@ function initViewer() {
     editorTextarea.setSelectionRange(s, e == null ? s : e);
   }
   function dispatchInput() { editorTextarea.dispatchEvent(new Event("input", { bubbles: true })); }
+  // Use execCommand insertText so the browser's native undo stack records changes.
+  function insertAt(s, e, text, finalSelStart, finalSelEnd) {
+    editorTextarea.focus();
+    editorTextarea.setSelectionRange(s, e);
+    const ok = document.execCommand && document.execCommand("insertText", false, text);
+    if (!ok) {
+      const v = editorTextarea.value;
+      editorTextarea.value = v.slice(0, s) + text + v.slice(e);
+      dispatchInput();
+    }
+    if (finalSelStart != null) setSel(finalSelStart, finalSelEnd == null ? finalSelStart : finalSelEnd);
+  }
   function applyWrap(prefix, suffix, placeholder) {
     const { s, e, v } = selRange();
-    let sel = v.slice(s, e);
-    if (!sel) sel = placeholder || "";
-    const replaced = prefix + sel + suffix;
-    editorTextarea.value = v.slice(0, s) + replaced + v.slice(e);
-    const newS = s + prefix.length;
-    setSel(newS, newS + sel.length);
-    dispatchInput();
+    const sel = v.slice(s, e) || (placeholder || "");
+    insertAt(s, e, prefix + sel + suffix, s + prefix.length, s + prefix.length + sel.length);
   }
   function applyLinePrefix(prefix) {
     const { s, e, v } = selRange();
@@ -678,15 +687,11 @@ function initViewer() {
     let le = v.indexOf("\n", e); if (le < 0) le = v.length;
     const block = v.slice(ls, le) || prefix.trim().replace(/\s.*$/, "") + " 새 항목";
     const transformed = block.split("\n").map((line) => prefix + line).join("\n");
-    editorTextarea.value = v.slice(0, ls) + transformed + v.slice(le);
-    setSel(ls, ls + transformed.length);
-    dispatchInput();
+    insertAt(ls, le, transformed, ls, ls + transformed.length);
   }
   function applyInsert(text) {
-    const { s, e, v } = selRange();
-    editorTextarea.value = v.slice(0, s) + text + v.slice(e);
-    setSel(s + text.length);
-    dispatchInput();
+    const { s, e } = selRange();
+    insertAt(s, e, text, s + text.length);
   }
 
   async function renderPreview() {
@@ -729,9 +734,7 @@ function initViewer() {
       const { s, e: ee, v } = selRange();
       const sel = v.slice(s, ee) || "코드";
       const block = "\n```\n" + sel + "\n```\n";
-      editorTextarea.value = v.slice(0, s) + block + v.slice(ee);
-      setSel(s + 5, s + 5 + sel.length);
-      dispatchInput();
+      insertAt(s, ee, block, s + 5, s + 5 + sel.length);
     } else if (a === "link") {
       const url = prompt("URL을 입력하세요", "https://");
       if (url) applyWrap("[", "](" + url + ")", "텍스트");
@@ -793,23 +796,44 @@ function initViewer() {
   }
 
   editorTextarea.addEventListener("keydown", (ev) => {
-    if (ev.key !== "Tab") return;
-    ev.preventDefault();
-    const { s, e: end, v } = selRange();
-    if (s === end) {
-      editorTextarea.value = v.slice(0, s) + "  " + v.slice(end);
-      setSel(s + 2);
-    } else {
-      const ls = v.lastIndexOf("\n", s - 1) + 1;
-      let le = v.indexOf("\n", end); if (le < 0) le = v.length;
-      const block = v.slice(ls, le);
-      const transformed = ev.shiftKey
-        ? block.split("\n").map((l) => l.replace(/^ {1,2}/, "")).join("\n")
-        : block.split("\n").map((l) => "  " + l).join("\n");
-      editorTextarea.value = v.slice(0, ls) + transformed + v.slice(le);
-      setSel(ls, ls + transformed.length);
+    if (ev.key === "Tab") {
+      ev.preventDefault();
+      const { s, e: end, v } = selRange();
+      if (s === end) {
+        insertAt(s, end, "  ", s + 2);
+      } else {
+        const ls = v.lastIndexOf("\n", s - 1) + 1;
+        let le = v.indexOf("\n", end); if (le < 0) le = v.length;
+        const block = v.slice(ls, le);
+        const transformed = ev.shiftKey
+          ? block.split("\n").map((l) => l.replace(/^ {1,2}/, "")).join("\n")
+          : block.split("\n").map((l) => "  " + l).join("\n");
+        insertAt(ls, le, transformed, ls, ls + transformed.length);
+      }
+      return;
     }
-    dispatchInput();
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey) {
+      const { s, e: end, v } = selRange();
+      if (s !== end) return;
+      const ls = v.lastIndexOf("\n", s - 1) + 1;
+      const line = v.slice(ls, s);
+      const m = /^(\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s+)?|\s*>\s+)/.exec(line);
+      if (!m) return;
+      const prefix = m[0];
+      const rest = line.slice(prefix.length);
+      if (!rest.trim()) {
+        // empty list/quote item: outdent (clear the prefix)
+        ev.preventDefault();
+        insertAt(ls, s, "", ls);
+        return;
+      }
+      ev.preventDefault();
+      let next = prefix;
+      const num = /^(\s*)(\d+)\.\s+/.exec(prefix);
+      if (num) next = num[1] + (parseInt(num[2], 10) + 1) + ". " + prefix.slice(num[0].length);
+      next = next.replace(/\[[xX]\]/, "[ ]");
+      insertAt(s, end, "\n" + next, s + 1 + next.length);
+    }
   });
 
   let pendingEditedText = null;
