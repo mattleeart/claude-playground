@@ -184,6 +184,7 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
 }
 .editor-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-info { flex: 0 0 auto; font-variant-numeric: tabular-nums; opacity: .85; }
+.lint-warn { color: #f59e0b; font-weight: 600; }
 .editor-status.error .editor-msg { color: #ef4444; }
 .editor-status.ok .editor-msg { color: #10b981; }
 

@@ -646,15 +646,26 @@ function initViewer() {
     if (ms) ms.textContent = msg || "";
     editorStatus.className = "editor-status" + (kind ? " " + kind : "");
   }
+  function lintMarkdown(v) {
+    const w = [];
+    if ((v.match(/^```/gm) || []).length % 2) w.push("``` 미종료");
+    if ((v.match(/^\$\$/gm) || []).length % 2) w.push("$$ 미종료");
+    if (/^[ \t]*#+\s*$/m.test(v)) w.push("빈 헤딩");
+    if (/!\[\s*\]\(\s*\)/.test(v)) w.push("빈 이미지");
+    return w;
+  }
   function updateEditorInfo() {
     const info = document.getElementById("editor-info"); if (!info) return;
     const ta = editorTextarea, v = ta.value;
     const s = ta.selectionStart, e = ta.selectionEnd;
+    let head = "";
+    const issues = lintMarkdown(v);
+    if (issues.length) head = `<span class="lint-warn">⚠ ${escapeHtml(issues[0])}${issues.length > 1 ? " +" + (issues.length - 1) : ""}</span> · `;
     if (s !== e) {
       const sel = v.slice(s, e);
       const cjkS = (sel.match(/[가-힣]/g) || []).length;
       const wordsS = (sel.replace(/[가-힣]/g, " ").match(/\b[\w'-]+\b/g) || []).length;
-      info.textContent = `선택 ${sel.length.toLocaleString()} 자 · ${(wordsS + cjkS).toLocaleString()} 단어`;
+      info.innerHTML = head + `선택 ${sel.length.toLocaleString()} 자 · ${(wordsS + cjkS).toLocaleString()} 단어`;
       return;
     }
     const pos = s;
@@ -663,7 +674,7 @@ function initViewer() {
     const col = pos - (before.lastIndexOf("\n") + 1) + 1;
     const cjk = (v.match(/[가-힣]/g) || []).length;
     const words = (v.replace(/[가-힣]/g, " ").match(/\b[\w'-]+\b/g) || []).length;
-    info.textContent = `행 ${line} · ${col}열 · ${(words + cjk).toLocaleString()} 단어 · ${v.length.toLocaleString()} 자`;
+    info.innerHTML = head + `행 ${line} · ${col}열 · ${(words + cjk).toLocaleString()} 단어 · ${v.length.toLocaleString()} 자`;
   }
   ["input", "keyup", "click", "select"].forEach((evName) =>
     editorTextarea.addEventListener(evName, updateEditorInfo)
