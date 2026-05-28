@@ -1420,8 +1420,17 @@ function initViewer() {
       if (k === "i") { ev.preventDefault(); applyWrap("*", "*", "기울임"); return; }
       if (k === "k") {
         ev.preventDefault();
-        const url = prompt("URL을 입력하세요", "https://");
-        if (url) applyWrap("[", "](" + url + ")", "텍스트");
+        (async () => {
+          let suggest = "https://";
+          try {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              const t = await navigator.clipboard.readText();
+              if (/^https?:\/\/\S+$/.test((t || "").trim())) suggest = t.trim();
+            }
+          } catch (_) {}
+          const url = prompt("URL을 입력하세요", suggest);
+          if (url) applyWrap("[", "](" + url + ")", "텍스트");
+        })();
         return;
       }
       if (k === "d") { ev.preventDefault(); duplicateLine(); return; }
