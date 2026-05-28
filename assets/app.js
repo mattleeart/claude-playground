@@ -741,6 +741,16 @@ function initViewer() {
     } else if (a === "image") {
       const url = prompt("이미지 URL", "https://");
       if (url) applyInsert("![설명](" + url + ")");
+    } else if (a === "snip-table") {
+      applyInsert("\n\n| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| a | b | c |\n| d | e | f |\n\n");
+    } else if (a === "snip-callout") {
+      applyInsert("\n\n> [!NOTE]\n> 메모 내용을 여기 작성하세요.\n\n");
+    } else if (a === "snip-mermaid") {
+      applyInsert("\n\n```mermaid\nflowchart LR\n  A[시작] --> B{조건}\n  B -- 예 --> C[성공]\n  B -- 아니오 --> D[실패]\n```\n\n");
+    } else if (a === "snip-math") {
+      applyInsert("\n\n$$\n수식 = \\frac{a}{b}\n$$\n\n");
+    } else if (a === "snip-details") {
+      applyInsert("\n\n<details>\n<summary>제목</summary>\n\n숨겨진 내용\n\n</details>\n\n");
     } else if (a === "preview") togglePreview();
     else if (a === "delete") deleteDoc();
   });
@@ -795,7 +805,12 @@ function initViewer() {
     } catch (e) { toast("삭제 실패: " + e.message); }
   }
 
+  const BRACKETS = { "(": ")", "[": "]", "{": "}", "`": "`", '"': '"', "*": "*", "_": "_" };
   editorTextarea.addEventListener("keydown", (ev) => {
+    if (BRACKETS[ev.key]) {
+      const { s, e } = selRange();
+      if (s !== e) { ev.preventDefault(); applyWrap(ev.key, BRACKETS[ev.key]); return; }
+    }
     if (ev.key === "Tab") {
       ev.preventDefault();
       const { s, e: end, v } = selRange();
