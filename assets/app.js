@@ -921,6 +921,90 @@ function initViewer() {
     }
   });
 
+  /* ---- slash commands ---- */
+  const slashPop = document.getElementById("slash-pop");
+  const slashList = document.getElementById("slash-list");
+  const SLASH_CMDS = [
+    { id: "h1", label: "H1 제목", keys: ["h1","heading","제목"], insert: "# 제목\n" },
+    { id: "h2", label: "H2 부제목", keys: ["h2","heading"], insert: "## 부제목\n" },
+    { id: "h3", label: "H3 소제목", keys: ["h3","heading"], insert: "### 소제목\n" },
+    { id: "bold", label: "굵게", keys: ["b","bold","굵게"], insert: "**굵게**" },
+    { id: "italic", label: "기울임", keys: ["i","italic","기울임"], insert: "*기울임*" },
+    { id: "ul", label: "글머리 목록", keys: ["ul","list","목록"], insert: "- 항목\n" },
+    { id: "ol", label: "번호 목록", keys: ["ol","number","번호"], insert: "1. 항목\n" },
+    { id: "task", label: "체크리스트", keys: ["task","todo","체크"], insert: "- [ ] 항목\n" },
+    { id: "quote", label: "인용문", keys: ["quote","인용"], insert: "> 인용\n" },
+    { id: "code", label: "코드 블록", keys: ["code","코드"], insert: "```\n코드\n```\n" },
+    { id: "table", label: "표", keys: ["table","표"], insert: "| 열1 | 열2 |\n| --- | --- |\n| a | b |\n" },
+    { id: "mermaid", label: "다이어그램 (Mermaid)", keys: ["mermaid","diagram","다이어그램"], insert: "```mermaid\nflowchart LR\nA --> B\n```\n" },
+    { id: "math", label: "수식 블록 (KaTeX)", keys: ["math","수식","katex"], insert: "$$\n수식\n$$\n" },
+    { id: "callout-note", label: "콜아웃: NOTE", keys: ["note","callout","콜아웃"], insert: "> [!NOTE]\n> 메모\n" },
+    { id: "callout-tip", label: "콜아웃: TIP", keys: ["tip","callout"], insert: "> [!TIP]\n> 팁\n" },
+    { id: "callout-warning", label: "콜아웃: WARNING", keys: ["warning","callout","주의"], insert: "> [!WARNING]\n> 주의\n" },
+    { id: "details", label: "접기/펼치기", keys: ["details","collapse","접기"], insert: "<details>\n<summary>제목</summary>\n\n내용\n\n</details>\n" },
+    { id: "hr", label: "구분선", keys: ["hr","divider","구분"], insert: "---\n" },
+    { id: "today", label: "오늘 날짜", keys: ["date","today","날짜"], insert: () => new Date().toISOString().slice(0, 10) },
+    { id: "now", label: "현재 시각", keys: ["time","now","시각"], insert: () => new Date().toLocaleString("ko-KR") },
+  ];
+
+  let slashStart = -1; // textarea position of the leading "/"
+  let slashFiltered = []; let slashIndex = 0;
+
+  function detectSlash() {
+    if (!document.body.classList.contains("editing")) { hideSlash(); return; }
+    const pos = editorTextarea.selectionStart;
+    const v = editorTextarea.value;
+    // walk back over word/Korean chars
+    let i = pos;
+    while (i > 0 && /[\w가-힣]/.test(v[i - 1])) i--;
+    if (i === 0 || v[i - 1] !== "/") { hideSlash(); return; }
+    const slashPos = i - 1;
+    if (slashPos !== 0 && v[slashPos - 1] !== "\n") { hideSlash(); return; }
+    slashStart = slashPos;
+    const query = v.slice(slashPos + 1, pos).toLowerCase();
+    const items = SLASH_CMDS.filter((c) =>
+      !query || c.id.startsWith(query) || c.label.toLowerCase().includes(query) || c.keys.some((k) => k.startsWith(query))
+    );
+    if (!items.length) { hideSlash(); return; }
+    slashFiltered = items;
+    slashIndex = 0;
+    renderSlash();
+    slashPop.hidden = false;
+  }
+  function renderSlash() {
+    slashList.innerHTML = "";
+    slashFiltered.forEach((c, idx) => {
+      const li = document.createElement("li");
+      if (idx === slashIndex) li.setAttribute("aria-selected", "true");
+      const a = document.createElement("a");
+      a.href = "#";
+      a.innerHTML = escapeHtml(c.label) + '<span class="slash-hint">/' + escapeHtml(c.id) + "</span>";
+      a.addEventListener("mousedown", (e) => { e.preventDefault(); slashIndex = idx; commitSlash(); });
+      li.appendChild(a); slashList.appendChild(li);
+    });
+  }
+  function hideSlash() { slashPop.hidden = true; slashStart = -1; }
+  function commitSlash() {
+    const c = slashFiltered[slashIndex]; if (!c) return;
+    const pos = editorTextarea.selectionStart;
+    const replacement = typeof c.insert === "function" ? c.insert() : c.insert;
+    insertAt(slashStart, pos, replacement, slashStart + replacement.length);
+    hideSlash();
+  }
+
+  editorTextarea.addEventListener("input", detectSlash);
+  editorTextarea.addEventListener("keyup", (e) => {
+    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) detectSlash();
+  });
+  editorTextarea.addEventListener("blur", () => setTimeout(hideSlash, 120));
+  editorTextarea.addEventListener("keydown", (e) => {
+    if (slashPop.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); slashIndex = (slashIndex + 1) % slashFiltered.length; renderSlash(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); slashIndex = (slashIndex - 1 + slashFiltered.length) % slashFiltered.length; renderSlash(); }
+    else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commitSlash(); }
+    else if (e.key === "Escape") { e.preventDefault(); hideSlash(); }
+  });
+
   async function newDoc() {
     let name = prompt("새 문서 파일명 (예: notes.md)", "");
     if (!name) return;

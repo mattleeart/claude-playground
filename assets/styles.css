@@ -26,6 +26,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body {
   margin: 0;
   padding: 0;
@@ -207,6 +208,14 @@ body.editing .to-top, body.editing .progress { display: none !important; }
 .outline-list li a.l2 { padding-left: 26px; color: var(--muted); }
 .outline-list li a.l3 { padding-left: 42px; color: var(--muted); font-size: .86rem; }
 .outline-list .empty { color: var(--muted); padding: 8px 12px; font-size: .85rem; }
+.slash-pop {
+  top: auto; bottom: 56px; right: 8px;
+  max-height: 50vh;
+}
+.outline-list li[aria-selected="true"] a { background: var(--surface); color: var(--accent); }
+.outline-list .slash-hint {
+  font-size: .72rem; color: var(--muted); float: right; padding-top: 1px;
+}
 
 .find-bar {
   display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
