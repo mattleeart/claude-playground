@@ -161,7 +161,9 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   border: none; outline: none;
   background: var(--bg); color: var(--fg);
   padding: 14px max(14px, env(safe-area-inset-left));
-  font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(15px * var(--md-scale));
+  line-height: 1.6;
   resize: none; tab-size: 2; -moz-tab-size: 2;
 }
 .editor-preview {

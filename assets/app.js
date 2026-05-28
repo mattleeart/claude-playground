@@ -1706,7 +1706,6 @@ function initViewer() {
     document.body.classList.remove("pinching");
   }
   function pinchAllowed() {
-    if (document.body.classList.contains("editing")) return false;
     const lb = document.querySelector(".lightbox"); if (lb && lb.classList.contains("open")) return false;
     return true;
   }
@@ -1745,7 +1744,6 @@ function initViewer() {
   // Ctrl/Cmd + wheel for desktop.
   document.addEventListener("wheel", (e) => {
     if (!(e.ctrlKey || e.metaKey)) return;
-    if (document.body.classList.contains("editing")) return;
     e.preventDefault();
     setZoom(getScale() + (e.deltaY > 0 ? -0.05 : 0.05), true);
   }, { passive: false });
