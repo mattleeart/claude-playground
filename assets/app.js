@@ -1574,6 +1574,7 @@ function initViewer() {
     if (location.hash !== hash) history.replaceState(null, "", hash);
   }
 
+  let activeTag = null;
   function getRecent() { try { return JSON.parse(lsGet(RECENT_KEY, "[]")) || []; } catch (_) { return []; } }
   function pushRecent(name) {
     const r = getRecent().filter((n) => n !== name);
@@ -1598,19 +1599,32 @@ function initViewer() {
   }
   function buildList() {
     list.innerHTML = "";
+    if (activeTag) {
+      const banner = document.createElement("li");
+      banner.className = "tag-filter-banner";
+      banner.innerHTML = `태그: <strong>#${escapeHtml(activeTag)}</strong> <button class="tag-clear" type="button">전체 보기</button>`;
+      banner.querySelector(".tag-clear").addEventListener("click", () => { activeTag = null; buildList(); });
+      list.appendChild(banner);
+    }
     const recent = getRecent();
-    sortedFiles().forEach((f) => {
-      const li = document.createElement("li");
-      li.dataset.name = f.name;
-      const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
-      const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
-      const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
-      const tagsHtml = f.tags && f.tags.length
-        ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
-      li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>${tagsHtml}`;
-      li.addEventListener("click", () => openFile(f.name));
-      list.appendChild(li);
-    });
+    sortedFiles()
+      .filter((f) => !activeTag || (f.tags && f.tags.includes(activeTag)))
+      .forEach((f) => {
+        const li = document.createElement("li");
+        li.dataset.name = f.name;
+        const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
+        const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
+        const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
+        const tagsHtml = f.tags && f.tags.length
+          ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
+        li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>${tagsHtml}`;
+        li.addEventListener("click", (ev) => {
+          const tagEl = ev.target.closest(".file-tag");
+          if (tagEl) { ev.stopPropagation(); activeTag = tagEl.dataset.tag; buildList(); return; }
+          openFile(f.name);
+        });
+        list.appendChild(li);
+      });
   }
 
   const sortSelect = document.getElementById("sort-select");

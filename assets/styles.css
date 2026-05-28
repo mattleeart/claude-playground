@@ -380,6 +380,16 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   margin-right: 4px; margin-top: 2px;
 }
 .file-list li.active .file-tag { color: var(--accent-fg); border-color: rgba(255,255,255,.4); }
+.tag-filter-banner {
+  background: var(--surface) !important; cursor: default !important;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .82rem; color: var(--muted);
+  border-radius: 8px; margin-bottom: 4px;
+}
+.tag-clear {
+  border: none; background: transparent; color: var(--accent);
+  cursor: pointer; font-size: .82rem; padding: 4px 6px;
+}
 
 .content {
   padding: 20px max(16px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
