@@ -207,6 +207,25 @@ body.editing .to-top, body.editing .progress { display: none !important; }
 .outline-list li a.l2 { padding-left: 26px; color: var(--muted); }
 .outline-list li a.l3 { padding-left: 42px; color: var(--muted); font-size: .86rem; }
 .outline-list .empty { color: var(--muted); padding: 8px 12px; font-size: .85rem; }
+
+.find-bar {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.find-input {
+  flex: 1; min-width: 120px;
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--fg);
+  font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.find-btn {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--fg); cursor: pointer; font-size: .85rem;
+}
+.find-btn:active { background: var(--surface); }
+.find-close { margin-left: auto; }
+.find-count { font-size: .78rem; color: var(--muted); padding: 0 4px; }
 @media (min-width: 900px) {
   .editor { left: var(--drawer-w); }
 }

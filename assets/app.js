@@ -831,6 +831,96 @@ function initViewer() {
     outlinePop.hidden = true;
   });
 
+  /* ---- find / replace in editor ---- */
+  const findBar = document.getElementById("find-bar");
+  const findInput = document.getElementById("find-input");
+  const replaceInput = document.getElementById("replace-input");
+  const findCount = document.getElementById("find-count");
+  function openFind() {
+    findBar.hidden = false;
+    const { s, e, v } = selRange();
+    if (s !== e) findInput.value = v.slice(s, e);
+    findInput.focus(); findInput.select();
+    updateFindCount();
+  }
+  function closeFind() { findBar.hidden = true; editorTextarea.focus(); }
+  function findStep(dir) {
+    const q = findInput.value;
+    if (!q) return;
+    const v = editorTextarea.value;
+    const sel = selRange();
+    let idx;
+    if (dir > 0) {
+      const start = sel.s === sel.e ? sel.e : sel.e;
+      idx = v.indexOf(q, start);
+      if (idx < 0) idx = v.indexOf(q, 0);
+    } else {
+      const start = sel.s - 1;
+      idx = v.lastIndexOf(q, start);
+      if (idx < 0) idx = v.lastIndexOf(q);
+    }
+    if (idx >= 0) {
+      editorTextarea.focus();
+      editorTextarea.setSelectionRange(idx, idx + q.length);
+      editorTextarea.blur(); editorTextarea.focus();
+      // refocus find input for continued navigation typing
+      setTimeout(() => findInput.focus(), 0);
+    }
+  }
+  function updateFindCount() {
+    const q = findInput.value, v = editorTextarea.value;
+    if (!q) { findCount.textContent = ""; return; }
+    let n = 0, i = 0;
+    while ((i = v.indexOf(q, i)) >= 0) { n++; i += Math.max(q.length, 1); }
+    findCount.textContent = n + "개";
+  }
+  function replaceOne() {
+    const q = findInput.value, r = replaceInput.value;
+    if (!q) return;
+    const sel = selRange();
+    if (sel.v.slice(sel.s, sel.e) === q) {
+      insertAt(sel.s, sel.e, r, sel.s + r.length);
+    }
+    findStep(1);
+    updateFindCount();
+  }
+  function replaceAll() {
+    const q = findInput.value, r = replaceInput.value;
+    if (!q) return;
+    const v = editorTextarea.value;
+    const next = v.split(q).join(r);
+    if (next === v) return;
+    editorTextarea.focus();
+    editorTextarea.setSelectionRange(0, v.length);
+    const ok = document.execCommand && document.execCommand("insertText", false, next);
+    if (!ok) { editorTextarea.value = next; dispatchInput(); }
+    updateFindCount();
+  }
+  findInput.addEventListener("input", updateFindCount);
+  findInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); findStep(e.shiftKey ? -1 : 1); }
+    else if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+  });
+  replaceInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); replaceOne(); }
+    else if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+  });
+  findBar.addEventListener("click", (e) => {
+    const a = e.target && e.target.dataset && e.target.dataset.find;
+    if (!a) return;
+    if (a === "next") findStep(1);
+    else if (a === "prev") findStep(-1);
+    else if (a === "one") replaceOne();
+    else if (a === "all") replaceAll();
+    else if (a === "close") closeFind();
+  });
+  // Ctrl/Cmd+F to open in edit mode
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && (e.key === "f" || e.key === "F") && document.body.classList.contains("editing")) {
+      e.preventDefault(); openFind();
+    }
+  });
+
   async function newDoc() {
     let name = prompt("새 문서 파일명 (예: notes.md)", "");
     if (!name) return;
@@ -992,6 +1082,8 @@ function initViewer() {
   /* ---- Esc to dismiss overlays ---- */
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    const fb = document.getElementById("find-bar");
+    if (fb && !fb.hidden) { fb.hidden = true; editorTextarea.focus(); return; }
     if (lightbox && lightbox.classList.contains("open")) lightbox.classList.remove("open");
     else if (!settings.hidden) settings.hidden = true;
     else if (drawer.classList.contains("open")) closeDrawer();

@@ -120,6 +120,16 @@
         <button class="tb" data-action="preview" title="미리보기" aria-label="미리보기">👁</button>
         <button class="tb tb-danger" data-action="delete" title="문서 삭제" aria-label="문서 삭제">🗑</button>
       </div>
+      <div id="find-bar" class="find-bar" hidden role="search" aria-label="찾기 / 바꾸기">
+        <input id="find-input" class="find-input" placeholder="찾기" aria-label="찾기" />
+        <input id="replace-input" class="find-input" placeholder="바꾸기" aria-label="바꾸기" />
+        <button class="find-btn" data-find="prev" title="이전" aria-label="이전">↑</button>
+        <button class="find-btn" data-find="next" title="다음" aria-label="다음">↓</button>
+        <button class="find-btn" data-find="one" title="현재 항목 바꾸기">바꾸기</button>
+        <button class="find-btn" data-find="all" title="모두 바꾸기">전체</button>
+        <span id="find-count" class="find-count"></span>
+        <button class="find-btn find-close" data-find="close" aria-label="닫기">✕</button>
+      </div>
       <div class="editor-stack">
         <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
         <div id="editor-preview" class="editor-preview markdown-body"></div>
