@@ -77,7 +77,14 @@
     <div id="backdrop" class="backdrop" hidden></div>
 
     <nav id="drawer" class="drawer" aria-label="문서 목록">
-      <div class="drawer-head"><span>문서 목록</span><button id="new-doc" class="drawer-action" aria-label="새 문서" title="새 문서">＋</button></div>
+      <div class="drawer-head"><span>문서 목록</span>
+        <select id="sort-select" class="sort-select" aria-label="정렬 기준">
+          <option value="name">이름순</option>
+          <option value="size">크기순</option>
+          <option value="recent">최근순</option>
+        </select>
+        <button id="new-doc" class="drawer-action" aria-label="새 문서" title="새 문서">＋</button>
+      </div>
       <input id="filter" class="filter" type="search" placeholder="제목·본문 검색…" aria-label="문서 검색" />
       <ul id="file-list" class="file-list"></ul>
       <ul id="search-results" class="file-list" hidden></ul>

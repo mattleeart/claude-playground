@@ -8,6 +8,7 @@ const AUTH = { salt: "074566f4abd1ce3f6696046e6d584f2a", iterations: 150000, has
 const SESSION_KEY = "mdv_unlocked";
 const THEME_KEY = "mdv_theme", SCALE_KEY = "mdv_scale", LAST_KEY = "mdv_last", POS_PREFIX = "mdv_pos_";
 const TOKEN_KEY = "mdv_gh_token", DRAFT_PREFIX = "mdv_draft_";
+const SORT_KEY = "mdv_sort", RECENT_KEY = "mdv_recent";
 const REPO = { owner: "mattleeart", repo: "claude-playground", branch: "claude/simple-web-server-0x42B" };
 
 /* ---------------- GitHub Contents API ---------------- */
@@ -1549,22 +1550,52 @@ function initViewer() {
     }
     currentDoc = file.name;
     lsSet(LAST_KEY, file.name);
+    pushRecent(file.name);
     onScroll();
     const hash = "#" + encodeURIComponent(file.name);
     if (location.hash !== hash) history.replaceState(null, "", hash);
   }
 
+  function getRecent() { try { return JSON.parse(lsGet(RECENT_KEY, "[]")) || []; } catch (_) { return []; } }
+  function pushRecent(name) {
+    const r = getRecent().filter((n) => n !== name);
+    r.unshift(name);
+    lsSet(RECENT_KEY, JSON.stringify(r.slice(0, 30)));
+  }
+  function sortedFiles() {
+    const mode = lsGet(SORT_KEY, "name");
+    const arr = files.slice();
+    if (mode === "size") arr.sort((a, b) => (b.size || 0) - (a.size || 0));
+    else if (mode === "recent") {
+      const r = getRecent();
+      arr.sort((a, b) => {
+        const ai = r.indexOf(a.name), bi = r.indexOf(b.name);
+        if (ai < 0 && bi < 0) return a.name.localeCompare(b.name);
+        if (ai < 0) return 1;
+        if (bi < 0) return -1;
+        return ai - bi;
+      });
+    } else arr.sort((a, b) => a.name.localeCompare(b.name));
+    return arr;
+  }
   function buildList() {
     list.innerHTML = "";
-    files.forEach((f) => {
+    const recent = getRecent();
+    sortedFiles().forEach((f) => {
       const li = document.createElement("li");
       li.dataset.name = f.name;
       const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
-      li.innerHTML = `${escapeHtml(f.title || f.name)}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>`;
+      const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
+      const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
+      li.innerHTML = `${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}</span>`;
       li.addEventListener("click", () => openFile(f.name));
       list.appendChild(li);
     });
   }
+
+  const sortSelect = document.getElementById("sort-select");
+  sortSelect.value = lsGet(SORT_KEY, "name");
+  sortSelect.addEventListener("change", () => { lsSet(SORT_KEY, sortSelect.value); buildList(); setActive(currentDoc); });
 
   function currentFromHash() {
     if (!location.hash) return null;

@@ -330,6 +330,14 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   text-transform: uppercase; color: var(--muted);
   padding: 16px 16px 8px;
 }
+.drawer-head { gap: 6px; }
+.sort-select {
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--fg);
+  padding: 3px 6px; font-size: .72rem;
+  text-transform: none; letter-spacing: 0;
+  margin-left: auto;
+}
 .drawer-action {
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--fg);
@@ -355,6 +363,13 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
 .file-list li.active { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .file-list li .file-sub { display: block; font-size: .75rem; color: var(--muted); margin-top: 2px; }
 .file-list li.active .file-sub { color: rgba(255,255,255,.8); }
+.recent-badge {
+  display: inline-block; vertical-align: middle;
+  font-size: .65rem; font-weight: 600;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg);
+  margin-left: 4px;
+}
 
 .content {
   padding: 20px max(16px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
