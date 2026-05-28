@@ -1034,6 +1034,51 @@ function initViewer() {
   }
   document.getElementById("new-doc").addEventListener("click", newDoc);
 
+  async function renameDoc() {
+    if (!editingState) return;
+    let newName = prompt("새 파일명", editingState.name);
+    if (!newName) return;
+    newName = newName.trim();
+    if (newName === editingState.name) return;
+    if (!/^[\w가-힣 .,_-]+$/.test(newName)) { toast("파일명에 사용할 수 없는 문자가 있습니다"); return; }
+    if (!/\.md$/i.test(newName)) newName += ".md";
+    if (files.some((f) => f.name === newName)) { toast("이미 존재하는 파일명입니다"); return; }
+    if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰이 필요합니다"); return; }
+    setEditorStatus("이름 변경 중…");
+    try {
+      const oldName = editingState.name;
+      const newPath = "content/" + newName;
+      const text = editorTextarea.value;
+      const { sha: newSha } = await ghPut(newPath, text, null, "docs: rename " + oldName + " → " + newName);
+      if (!editingState.sha) { const g = await ghGet(editingState.path); editingState.sha = g.sha; }
+      await ghDelete(editingState.path, editingState.sha, "docs: remove " + oldName);
+      const oldIdx = files.findIndex((f) => f.name === oldName);
+      if (oldIdx >= 0) files.splice(oldIdx, 1);
+      const f = { name: newName, path: newPath, title: newName.replace(/\.md$/i, ""), size: text.length };
+      files.push(f); files.sort((a, b) => a.name.localeCompare(b.name));
+      delete docText[oldName]; docText[newName] = text;
+      lsSet(DRAFT_PREFIX + oldName, "");
+      if (lsGet(LAST_KEY, "") === oldName) lsSet(LAST_KEY, newName);
+      editingState.name = newName;
+      editingState.path = newPath;
+      editingState.sha = newSha;
+      editingState.original = text;
+      saveEditBtn.classList.remove("has-changes");
+      titleEl.textContent = f.title;
+      buildList();
+      currentDoc = newName;
+      history.replaceState(null, "", "#" + encodeURIComponent(newName));
+      setEditorStatus("이름 변경됨 — 라이브 반영은 약 1분", "ok");
+    } catch (e) {
+      setEditorStatus("이름 변경 실패: " + e.message, "error");
+    }
+  }
+  // Tap topbar title in edit mode to rename
+  titleEl.addEventListener("click", () => {
+    if (!document.body.classList.contains("editing")) return;
+    renameDoc();
+  });
+
   async function deleteDoc() {
     if (!editingState) return;
     if (!confirm("'" + editingState.name + "' 문서를 삭제하시겠습니까?")) return;

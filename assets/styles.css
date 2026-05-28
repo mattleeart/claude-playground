@@ -129,6 +129,8 @@ button { font: inherit; }
 body.editing .read-only { display: none !important; }
 body:not(.editing) .edit-only { display: none !important; }
 body.editing .to-top, body.editing .progress { display: none !important; }
+body.editing .topbar-title { cursor: pointer; }
+body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .45; }
 
 .editor {
   position: fixed;
