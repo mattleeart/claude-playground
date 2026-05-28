@@ -1942,9 +1942,17 @@ function initViewer() {
     }
     buildList();
     updateDrawerStat();
+    const params = new URLSearchParams(location.search);
     const last = lsGet(LAST_KEY, null);
     const initial = currentFromHash() || (last && files.some((f) => f.name === last) ? last : files[0].name);
     openFile(initial);
+    // PWA app-shortcut handling (?new=1)
+    if (params.get("new") === "1") {
+      history.replaceState(null, "", location.pathname + location.hash);
+      setTimeout(newDoc, 300);
+    } else if (params.get("last") === "1") {
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
     // populate tags + related docs in the background
     setTimeout(() => loadAllTags(), 200);
   })();
