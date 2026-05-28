@@ -636,7 +636,15 @@ function initViewer() {
   function updateEditorInfo() {
     const info = document.getElementById("editor-info"); if (!info) return;
     const ta = editorTextarea, v = ta.value;
-    const pos = ta.selectionStart;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    if (s !== e) {
+      const sel = v.slice(s, e);
+      const cjkS = (sel.match(/[가-힣]/g) || []).length;
+      const wordsS = (sel.replace(/[가-힣]/g, " ").match(/\b[\w'-]+\b/g) || []).length;
+      info.textContent = `선택 ${sel.length.toLocaleString()} 자 · ${(wordsS + cjkS).toLocaleString()} 단어`;
+      return;
+    }
+    const pos = s;
     const before = v.slice(0, pos);
     const line = (before.match(/\n/g) || []).length + 1;
     const col = pos - (before.lastIndexOf("\n") + 1) + 1;
