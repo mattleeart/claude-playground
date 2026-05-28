@@ -900,6 +900,14 @@ function initViewer() {
     }
   });
 
+  // drop file → upload if image
+  editorTextarea.addEventListener("dragover", (e) => { if (e.dataTransfer && e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+  editorTextarea.addEventListener("drop", (e) => {
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    const file = e.dataTransfer.files[0];
+    if (/^image\//.test(file.type)) { e.preventDefault(); uploadPastedImage(file); }
+  });
+
   async function uploadPastedImage(file) {
     if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("이미지 업로드에 토큰이 필요합니다"); return; }
     setEditorStatus("이미지 업로드 중…", "");
@@ -923,6 +931,18 @@ function initViewer() {
 
   const BRACKETS = { "(": ")", "[": "]", "{": "}", "`": "`", '"': '"', "*": "*", "_": "_" };
   editorTextarea.addEventListener("keydown", (ev) => {
+    // Ctrl/Cmd shortcuts for common formatting
+    if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && !ev.altKey) {
+      const k = ev.key.toLowerCase();
+      if (k === "b") { ev.preventDefault(); applyWrap("**", "**", "굵게"); return; }
+      if (k === "i") { ev.preventDefault(); applyWrap("*", "*", "기울임"); return; }
+      if (k === "k") {
+        ev.preventDefault();
+        const url = prompt("URL을 입력하세요", "https://");
+        if (url) applyWrap("[", "](" + url + ")", "텍스트");
+        return;
+      }
+    }
     if (BRACKETS[ev.key]) {
       const { s, e } = selRange();
       if (s !== e) { ev.preventDefault(); applyWrap(ev.key, BRACKETS[ev.key]); return; }
