@@ -611,8 +611,7 @@ function initViewer() {
     document.body.classList.remove("editing");
     editorEl.hidden = true; content.hidden = false;
     // reset preview mode
-    if (editorPreview) editorPreview.hidden = true;
-    if (editorTextarea) editorTextarea.hidden = false;
+    if (editorTextarea && editorTextarea.parentElement) editorTextarea.parentElement.classList.remove("preview-on");
     const pBtn = editorToolbar && editorToolbar.querySelector('[data-action="preview"]');
     if (pBtn) pBtn.classList.remove("on");
     setEditorStatus("");
@@ -662,11 +661,16 @@ function initViewer() {
     exitEditMode(true);
   });
   saveEditBtn.addEventListener("click", saveEdit);
+  let livePreviewTimer = 0;
   editorTextarea.addEventListener("input", () => {
     if (!editingState) return;
     saveEditBtn.classList.toggle("has-changes", editorTextarea.value !== editingState.original);
     clearTimeout(draftTimer);
     draftTimer = setTimeout(() => lsSet(DRAFT_PREFIX + editingState.name, editorTextarea.value), 600);
+    if (previewOn()) {
+      clearTimeout(livePreviewTimer);
+      livePreviewTimer = setTimeout(renderPreview, 350);
+    }
   });
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S") && document.body.classList.contains("editing")) {
@@ -730,14 +734,18 @@ function initViewer() {
     });
     enhance(editorPreview);
   }
+  function previewOn() { return editorTextarea.parentElement.classList.contains("preview-on"); }
   function togglePreview() {
     const btn = editorToolbar.querySelector('[data-action="preview"]');
-    if (editorPreview.hidden) {
-      editorPreview.hidden = false; editorTextarea.hidden = true;
-      btn.classList.add("on"); renderPreview();
+    const stack = editorTextarea.parentElement;
+    if (previewOn()) {
+      stack.classList.remove("preview-on");
+      btn.classList.remove("on");
+      editorTextarea.focus();
     } else {
-      editorPreview.hidden = true; editorTextarea.hidden = false;
-      btn.classList.remove("on"); editorTextarea.focus();
+      stack.classList.add("preview-on");
+      btn.classList.add("on");
+      renderPreview();
     }
   }
 

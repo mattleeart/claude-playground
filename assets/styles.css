@@ -154,7 +154,7 @@ body.editing .to-top, body.editing .progress { display: none !important; }
 .tb-sep { flex: 0 0 auto; width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
 .editor-stack { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .editor-textarea {
-  flex: 1; width: 100%;
+  flex: 1; width: 100%; min-height: 0;
   border: none; outline: none;
   background: var(--bg); color: var(--fg);
   padding: 14px max(14px, env(safe-area-inset-left));
@@ -162,8 +162,16 @@ body.editing .to-top, body.editing .progress { display: none !important; }
   resize: none; tab-size: 2; -moz-tab-size: 2;
 }
 .editor-preview {
-  flex: 1; overflow-y: auto;
+  flex: 1; min-height: 0; overflow-y: auto;
   padding: 14px max(14px, env(safe-area-inset-left));
+  display: none;
+}
+.editor-stack.preview-on > .editor-textarea { display: none; }
+.editor-stack.preview-on > .editor-preview { display: block; }
+@media (min-width: 1100px) {
+  .editor-stack.preview-on { flex-direction: row; }
+  .editor-stack.preview-on > .editor-textarea { display: block; border-right: 1px solid var(--border); }
+  .editor-stack.preview-on > .editor-preview { display: block; }
 }
 .editor-status {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
