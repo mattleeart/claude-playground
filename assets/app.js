@@ -1388,6 +1388,18 @@ function initViewer() {
     if (ev.altKey && !ev.metaKey && !ev.ctrlKey && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
       ev.preventDefault(); moveLines(ev.key === "ArrowUp" ? -1 : 1); return;
     }
+    // Ctrl/Cmd+Enter: toggle checklist on current line
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+      const { ls, le, v } = getLineRange();
+      const line = v.slice(ls, le);
+      const m = /^(\s*[-*+]\s+)\[([ xX])\](.*)$/.exec(line);
+      if (m) {
+        const flipped = m[1] + "[" + (m[2].trim() ? " " : "x") + "]" + m[3];
+        ev.preventDefault();
+        insertAt(ls, le, flipped, ls + flipped.length);
+        return;
+      }
+    }
     // Ctrl/Cmd shortcuts for common formatting
     if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && !ev.altKey) {
       const k = ev.key.toLowerCase();
