@@ -775,7 +775,11 @@ function initViewer() {
         const got = await ghGet(editingState.path);
         editingState.sha = got.sha;
       }
-      const { sha } = await ghPut(editingState.path, text, editingState.sha, "docs: update " + editingState.name);
+      const customMsgEl = document.getElementById("commit-msg");
+      const customMsg = customMsgEl ? customMsgEl.value.trim() : "";
+      const message = customMsg || "docs: update " + editingState.name;
+      const { sha } = await ghPut(editingState.path, text, editingState.sha, message);
+      if (customMsgEl) customMsgEl.value = "";
       editingState.sha = sha;
       editingState.original = text;
       lsSet(DRAFT_PREFIX + editingState.name, "");
