@@ -463,6 +463,13 @@ function initViewer() {
   document.getElementById("font-dec").addEventListener("click", () => setScale(getScale() - 0.1));
   document.getElementById("font-inc").addEventListener("click", () => setScale(getScale() + 0.1));
   document.getElementById("font-reset").addEventListener("click", () => setScale(1));
+  const spellcheckToggle = document.getElementById("spellcheck-toggle");
+  spellcheckToggle.checked = lsGet("mdv_spellcheck", "0") === "1";
+  editorTextarea.spellcheck = spellcheckToggle.checked;
+  spellcheckToggle.addEventListener("change", () => {
+    lsSet("mdv_spellcheck", spellcheckToggle.checked ? "1" : "0");
+    editorTextarea.spellcheck = spellcheckToggle.checked;
+  });
   if (window.matchMedia) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") onThemeChanged(); });
   }
@@ -1965,6 +1972,15 @@ function initViewer() {
     const mode = lsGet(SORT_KEY, "name");
     const arr = files.slice();
     if (mode === "size") arr.sort((a, b) => (b.size || 0) - (a.size || 0));
+    else if (mode === "date") {
+      arr.sort((a, b) => {
+        const ad = a.tags ? "" : ""; // placeholder; use frontmatter date
+        const at = (docText[a.name] && parseFrontmatter(docText[a.name]).meta.date) || "";
+        const bt = (docText[b.name] && parseFrontmatter(docText[b.name]).meta.date) || "";
+        if (at === bt) return a.name.localeCompare(b.name);
+        return at < bt ? 1 : -1; // newest first
+      });
+    }
     else if (mode === "recent") {
       const r = getRecent();
       arr.sort((a, b) => {
