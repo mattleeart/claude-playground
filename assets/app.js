@@ -465,10 +465,14 @@ function initViewer() {
   document.getElementById("font-reset").addEventListener("click", () => setScale(1));
   const spellcheckToggle = document.getElementById("spellcheck-toggle");
   spellcheckToggle.checked = lsGet("mdv_spellcheck", "0") === "1";
-  editorTextarea.spellcheck = spellcheckToggle.checked;
+  const applySpellcheck = () => {
+    const ta = document.getElementById("editor-textarea");
+    if (ta) ta.spellcheck = spellcheckToggle.checked;
+  };
+  applySpellcheck();
   spellcheckToggle.addEventListener("change", () => {
     lsSet("mdv_spellcheck", spellcheckToggle.checked ? "1" : "0");
-    editorTextarea.spellcheck = spellcheckToggle.checked;
+    applySpellcheck();
   });
   if (window.matchMedia) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (getTheme() === "auto") onThemeChanged(); });
