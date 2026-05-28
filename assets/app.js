@@ -552,9 +552,27 @@ function initViewer() {
   let draftTimer = 0;
 
   function setEditorStatus(msg, kind) {
-    editorStatus.textContent = msg || "";
+    const ms = document.getElementById("editor-msg");
+    if (ms) ms.textContent = msg || "";
     editorStatus.className = "editor-status" + (kind ? " " + kind : "");
   }
+  function updateEditorInfo() {
+    const info = document.getElementById("editor-info"); if (!info) return;
+    const ta = editorTextarea, v = ta.value;
+    const pos = ta.selectionStart;
+    const before = v.slice(0, pos);
+    const line = (before.match(/\n/g) || []).length + 1;
+    const col = pos - (before.lastIndexOf("\n") + 1) + 1;
+    const cjk = (v.match(/[가-힣]/g) || []).length;
+    const words = (v.replace(/[가-힣]/g, " ").match(/\b[\w'-]+\b/g) || []).length;
+    info.textContent = `행 ${line} · ${col}열 · ${(words + cjk).toLocaleString()} 단어 · ${v.length.toLocaleString()} 자`;
+  }
+  ["input", "keyup", "click", "select"].forEach((evName) =>
+    editorTextarea.addEventListener(evName, updateEditorInfo)
+  );
+  document.addEventListener("selectionchange", () => {
+    if (document.activeElement === editorTextarea) updateEditorInfo();
+  });
 
   async function enterEditMode() {
     if (!currentDoc) { toast("문서가 선택되지 않았습니다"); return; }
@@ -578,6 +596,7 @@ function initViewer() {
       }
       setEditorStatus("준비됨. 저장하려면 💾 또는 Ctrl/Cmd+S.", "");
       editorTextarea.focus();
+      updateEditorInfo();
     } catch (e) {
       setEditorStatus("불러오기 실패: " + e.message, "error");
     }
@@ -624,7 +643,9 @@ function initViewer() {
       toast("저장됨 — 라이브 반영은 약 1분");
       openFile(name);
     } catch (e) {
-      setEditorStatus("저장 실패: " + e.message, "error");
+      // refresh sha so retry succeeds even after concurrent edits
+      try { const g = await ghGet(editingState.path); editingState.sha = g.sha; } catch (_) {}
+      setEditorStatus("저장 실패: " + e.message + " (다시 시도 시 최신 위로 덮어씁니다)", "error");
     } finally {
       saveEditBtn.disabled = false;
     }

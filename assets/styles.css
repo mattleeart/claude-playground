@@ -166,12 +166,15 @@ body.editing .to-top, body.editing .progress { display: none !important; }
   padding: 14px max(14px, env(safe-area-inset-left));
 }
 .editor-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 6px 14px; font-size: .76rem; color: var(--muted);
   border-top: 1px solid var(--border); background: var(--surface);
   min-height: 1.6em;
 }
-.editor-status.error { color: #ef4444; }
-.editor-status.ok { color: #10b981; }
+.editor-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-info { flex: 0 0 auto; font-variant-numeric: tabular-nums; opacity: .85; }
+.editor-status.error .editor-msg { color: #ef4444; }
+.editor-status.ok .editor-msg { color: #10b981; }
 @media (min-width: 900px) {
   .editor { left: var(--drawer-w); }
 }
