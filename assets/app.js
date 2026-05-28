@@ -1329,6 +1329,28 @@ function initViewer() {
     else if (e.key === "Escape") { e.preventDefault(); hideSlash(); }
   });
 
+  async function createShareDoc({ title, text, url }) {
+    if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("공유 내용을 저장하려면 토큰이 필요합니다"); return; }
+    const base = (title || "공유").replace(/[^\w가-힣 .,_-]/g, "").trim().slice(0, 40) || "shared";
+    let name = base + ".md";
+    if (files.some((f) => f.name === name)) name = base + "-" + Date.now() + ".md";
+    const today = new Date().toISOString().slice(0, 10);
+    const parts = [];
+    if (text) parts.push(text);
+    if (url) parts.push("\n[원문 링크](" + url + ")");
+    const tpl = "---\ndate: " + today + "\ntags: [공유]\n---\n\n# " + (title || "공유 메모") + "\n\n" + parts.join("\n\n") + "\n";
+    try {
+      const { sha } = await ghPut("content/" + name, tpl, null, "docs: share " + name);
+      const f = { name, path: "content/" + name, title: title || name, size: tpl.length };
+      files.push(f); files.sort((a, b) => a.name.localeCompare(b.name));
+      buildList();
+      pendingEditedText = { name, text: tpl };
+      openFile(name);
+      toast("공유한 내용을 저장했습니다");
+      lsSet(LAST_KEY, name);
+    } catch (e) { toast("공유 저장 실패: " + e.message); }
+  }
+
   async function newDoc() {
     let name = prompt("새 문서 파일명 (예: notes.md)", "");
     if (!name) return;
@@ -2083,6 +2105,11 @@ function initViewer() {
       setTimeout(newDoc, 300);
     } else if (params.get("last") === "1") {
       history.replaceState(null, "", location.pathname + location.hash);
+    } else if (params.has("title") || params.has("text") || params.has("url")) {
+      // PWA share target
+      const sd = { title: params.get("title") || "", text: params.get("text") || "", url: params.get("url") || "" };
+      history.replaceState(null, "", location.pathname + location.hash);
+      setTimeout(() => createShareDoc(sd), 300);
     }
     // populate tags + related docs in the background
     setTimeout(() => loadAllTags(), 200);
