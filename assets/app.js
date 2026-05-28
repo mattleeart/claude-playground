@@ -39,13 +39,16 @@ async function ghGet(path) {
   const j = await r.json();
   return { sha: j.sha, text: b64decodeUtf8(j.content || "") };
 }
-async function ghPut(path, text, sha, message) {
-  const body = { message, content: b64encodeUtf8(text), branch: REPO.branch };
+async function ghPutContent(path, contentBase64, sha, message) {
+  const body = { message, content: contentBase64, branch: REPO.branch };
   if (sha) body.sha = sha;
   const r = await fetch(ghContentsUrl(path), { method: "PUT", headers: { ...ghHeaders(true), "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error("PUT " + r.status + " " + t.slice(0, 200)); }
   const j = await r.json();
   return { sha: j.content && j.content.sha };
+}
+async function ghPut(path, text, sha, message) {
+  return ghPutContent(path, b64encodeUtf8(text), sha, message);
 }
 async function ghDelete(path, sha, message) {
   const r = await fetch(ghContentsUrl(path), { method: "DELETE", headers: { ...ghHeaders(true), "Content-Type": "application/json" }, body: JSON.stringify({ message, sha, branch: REPO.branch }) });
@@ -824,6 +827,46 @@ function initViewer() {
       if (files.length) openFile(files[0].name);
       else { content.innerHTML = '<p class="placeholder">문서가 없습니다.</p>'; titleEl.textContent = "문서"; currentDoc = null; }
     } catch (e) { toast("삭제 실패: " + e.message); }
+  }
+
+  /* ---- smart paste: URL→link, image→upload ---- */
+  editorTextarea.addEventListener("paste", (ev) => {
+    if (!ev.clipboardData) return;
+    // image first
+    for (const it of ev.clipboardData.items) {
+      if (it.kind === "file" && /^image\//.test(it.type)) {
+        ev.preventDefault();
+        const file = it.getAsFile(); if (file) uploadPastedImage(file);
+        return;
+      }
+    }
+    // URL → wrap selection
+    const text = ev.clipboardData.getData("text");
+    if (text && /^https?:\/\/\S+$/.test(text.trim())) {
+      const { s, e } = selRange();
+      if (s !== e) { ev.preventDefault(); applyWrap("[", "](" + text.trim() + ")"); }
+    }
+  });
+
+  async function uploadPastedImage(file) {
+    if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("이미지 업로드에 토큰이 필요합니다"); return; }
+    setEditorStatus("이미지 업로드 중…", "");
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const hashBuf = await crypto.subtle.digest("SHA-1", buf);
+      const hex = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 12);
+      const ext = (file.type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "").toLowerCase() || "png";
+      const name = `paste-${hex}.${ext}`;
+      const path = `assets/uploads/${name}`;
+      let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const b64 = btoa(bin);
+      await ghPutContent(path, b64, null, "docs: upload " + name);
+      applyInsert(`![붙여넣은 이미지](${path})`);
+      setEditorStatus("이미지 업로드 완료", "ok");
+    } catch (e) {
+      setEditorStatus("이미지 업로드 실패: " + e.message, "error");
+    }
   }
 
   const BRACKETS = { "(": ")", "[": "]", "{": "}", "`": "`", '"': '"', "*": "*", "_": "_" };
