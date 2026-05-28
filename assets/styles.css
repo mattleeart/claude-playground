@@ -343,6 +343,10 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   text-transform: uppercase; color: var(--muted);
   padding: 16px 16px 8px;
 }
+.drawer-stat {
+  padding: 14px 16px 0; font-size: .76rem; color: var(--muted);
+}
+.drawer-stat strong { color: var(--fg); font-weight: 700; }
 .drawer-head { gap: 6px; }
 .sort-select {
   border: 1px solid var(--border); border-radius: 7px;

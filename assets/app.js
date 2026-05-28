@@ -376,6 +376,15 @@ function initViewer() {
       any = true;
     });
     if (any) buildList();
+    updateDrawerStat();
+  }
+  function updateDrawerStat() {
+    const el = document.getElementById("drawer-stat"); if (!el) return;
+    const docs = files.length;
+    const total = files.reduce((s, f) => s + (f.readingMin || 0), 0);
+    if (!docs) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = `📚 <strong>${docs}</strong> 문서` + (total ? ` · ⏱ 약 <strong>${total}</strong>분` : "");
   }
   function closeDrawer() { drawer.classList.remove("open"); backdrop.hidden = true; }
 
@@ -1724,6 +1733,7 @@ function initViewer() {
       return;
     }
     buildList();
+    updateDrawerStat();
     const last = lsGet(LAST_KEY, null);
     const initial = currentFromHash() || (last && files.some((f) => f.name === last) ? last : files[0].name);
     openFile(initial);
