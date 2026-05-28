@@ -73,6 +73,34 @@
         <small class="settings-hint">repo contents:write 권한. 이 기기에만 저장됩니다.</small>
         <button id="gh-token-clear" class="seg-btn">삭제</button>
       </div>
+      <div class="settings-row settings-help">
+        <button id="show-shortcuts" class="seg-btn">키보드 단축키</button>
+      </div>
+    </div>
+
+    <div id="shortcuts-pop" class="outline-pop shortcuts-pop" hidden role="dialog" aria-label="키보드 단축키">
+      <div class="outline-head shortcuts-head">
+        <span>키보드 단축키</span>
+        <button id="shortcuts-close" class="drawer-action" aria-label="닫기">✕</button>
+      </div>
+      <table class="shortcuts-table">
+        <tr><th colspan="2">읽기 모드</th></tr>
+        <tr><td>ESC</td><td>오버레이 닫기 (라이트박스/설정/드로어)</td></tr>
+        <tr><td>좌→ 스와이프</td><td>드로어 열기</td></tr>
+        <tr><th colspan="2">편집기</th></tr>
+        <tr><td>Ctrl/Cmd+S</td><td>저장</td></tr>
+        <tr><td>Ctrl/Cmd+F</td><td>찾기/바꾸기</td></tr>
+        <tr><td>Ctrl/Cmd+B/I/K</td><td>굵게 / 기울임 / 링크</td></tr>
+        <tr><td>Ctrl/Cmd+D</td><td>현재 줄 복제</td></tr>
+        <tr><td>Ctrl/Cmd+/</td><td>HTML 주석 토글</td></tr>
+        <tr><td>Ctrl/Cmd+1..4</td><td>H1~H4 헤딩 변경</td></tr>
+        <tr><td>Ctrl/Cmd+Enter</td><td>체크리스트 토글</td></tr>
+        <tr><td>Alt+↑/↓</td><td>줄 위/아래 이동</td></tr>
+        <tr><td>Tab / Shift+Tab</td><td>들여쓰기 / 내어쓰기</td></tr>
+        <tr><td>Enter (목록/인용)</td><td>다음 항목 자동 시작; 빈 항목에서 이탈</td></tr>
+        <tr><td>/</td><td>줄 시작에서 슬래시 명령 메뉴</td></tr>
+        <tr><td>([{`"*_ + 선택</td><td>선택 영역 감싸기</td></tr>
+      </table>
     </div>
 
     <div id="backdrop" class="backdrop" hidden></div>

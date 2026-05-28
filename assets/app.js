@@ -618,6 +618,19 @@ function initViewer() {
   tokenInput.addEventListener("input", () => { lsSet(TOKEN_KEY, tokenInput.value.trim()); });
   tokenClearBtn.addEventListener("click", () => { tokenInput.value = ""; lsSet(TOKEN_KEY, ""); toast("토큰을 삭제했습니다"); });
 
+  const shortcutsPop = document.getElementById("shortcuts-pop");
+  document.getElementById("show-shortcuts").addEventListener("click", () => {
+    settings.hidden = true;
+    shortcutsPop.hidden = false;
+  });
+  document.getElementById("shortcuts-close").addEventListener("click", () => { shortcutsPop.hidden = true; });
+  document.addEventListener("click", (e) => {
+    if (shortcutsPop.hidden) return;
+    if (shortcutsPop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest("#show-shortcuts")) return;
+    shortcutsPop.hidden = true;
+  });
+
   /* ---- editor ---- */
   const editBtn = document.getElementById("edit-btn");
   const cancelEditBtn = document.getElementById("cancel-edit");
