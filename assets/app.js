@@ -300,6 +300,19 @@ function initViewer() {
     if (!node) return;
     const h1 = root.querySelector(":scope > h1");
     if (h1) h1.after(node); else root.prepend(node);
+    // make tag pills clickable: filter drawer by that tag
+    node.querySelectorAll(".tag").forEach((t) => {
+      t.style.cursor = "pointer";
+      t.title = "이 태그로 필터";
+      t.addEventListener("click", (e) => {
+        e.preventDefault();
+        const txt = (t.textContent || "").replace(/^#/, "").trim();
+        if (!txt) return;
+        activeTag = txt;
+        buildList(); setActive(currentDoc);
+        openDrawer();
+      });
+    });
   }
 
   /* ---- emoji shortcodes (lazy) ---- */
