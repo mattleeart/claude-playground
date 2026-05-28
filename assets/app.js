@@ -739,7 +739,58 @@ function initViewer() {
       const url = prompt("이미지 URL", "https://");
       if (url) applyInsert("![설명](" + url + ")");
     } else if (a === "preview") togglePreview();
+    else if (a === "delete") deleteDoc();
   });
+
+  async function newDoc() {
+    let name = prompt("새 문서 파일명 (예: notes.md)", "");
+    if (!name) return;
+    name = name.trim();
+    if (!/^[\w가-힣 .,_-]+$/.test(name)) { toast("파일명에 사용할 수 없는 문자가 있습니다"); return; }
+    if (!/\.md$/i.test(name)) name += ".md";
+    if (files.some((f) => f.name === name)) { toast("이미 존재하는 파일명입니다"); return; }
+    if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰을 먼저 입력하세요"); return; }
+    const title = name.replace(/\.md$/i, "");
+    const tpl = "# " + title + "\n\n";
+    try {
+      const { sha } = await ghPut("content/" + name, tpl, null, "docs: add " + name);
+      const f = { name, path: "content/" + name, title, size: tpl.length };
+      files.push(f); files.sort((a, b) => a.name.localeCompare(b.name));
+      buildList();
+      currentDoc = name;
+      titleEl.textContent = title;
+      document.body.classList.add("editing");
+      editorEl.hidden = false; content.hidden = true;
+      editingState = { name, path: f.path, sha, original: tpl };
+      editorTextarea.value = tpl;
+      setEditorStatus("새 문서 생성됨. 편집 후 저장하세요.", "ok");
+      closeDrawer();
+      editorTextarea.focus();
+      lsSet(LAST_KEY, name);
+    } catch (e) { toast("생성 실패: " + e.message); }
+  }
+  document.getElementById("new-doc").addEventListener("click", newDoc);
+
+  async function deleteDoc() {
+    if (!editingState) return;
+    if (!confirm("'" + editingState.name + "' 문서를 삭제하시겠습니까?")) return;
+    if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰을 먼저 입력하세요"); return; }
+    try {
+      if (!editingState.sha) { const g = await ghGet(editingState.path); editingState.sha = g.sha; }
+      await ghDelete(editingState.path, editingState.sha, "docs: delete " + editingState.name);
+      const name = editingState.name;
+      const idx = files.findIndex((f) => f.name === name);
+      if (idx >= 0) files.splice(idx, 1);
+      delete docText[name];
+      lsSet(DRAFT_PREFIX + name, "");
+      if (lsGet(LAST_KEY, "") === name) lsSet(LAST_KEY, "");
+      exitEditMode(true);
+      buildList();
+      toast("삭제됨 — 라이브 반영은 약 1분");
+      if (files.length) openFile(files[0].name);
+      else { content.innerHTML = '<p class="placeholder">문서가 없습니다.</p>'; titleEl.textContent = "문서"; currentDoc = null; }
+    } catch (e) { toast("삭제 실패: " + e.message); }
+  }
 
   editorTextarea.addEventListener("keydown", (ev) => {
     if (ev.key !== "Tab") return;
