@@ -53,6 +53,18 @@
       "path": "content/welcome.md",
       "title": "환영합니다 👋",
       "size": 812
+    },
+    {
+      "name": "예제/폴더 안 문서.md",
+      "path": "content/예제/폴더 안 문서.md",
+      "title": "폴더 안 문서",
+      "size": 460
+    },
+    {
+      "name": "예제/하위/더 깊은 문서.md",
+      "path": "content/예제/하위/더 깊은 문서.md",
+      "title": "더 깊은 문서",
+      "size": 152
     }
   ]
 }

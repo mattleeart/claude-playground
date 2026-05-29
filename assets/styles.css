@@ -364,6 +364,30 @@ body.editing .topbar-title::after { content: " ✎"; font-size: .7em; opacity: .
   border: 1px solid var(--border); border-radius: 9px;
   background: var(--surface); color: var(--fg); font-size: .9rem;
 }
+
+.breadcrumb {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 2px; padding: 4px 12px 8px;
+  font-size: .82rem;
+}
+.breadcrumb:empty { display: none; }
+.crumb {
+  background: none; border: none; cursor: pointer;
+  color: var(--accent); padding: 3px 6px; border-radius: 6px;
+  font-size: .82rem;
+}
+.crumb:active { background: var(--surface); }
+.crumb.current { color: var(--fg); font-weight: 600; cursor: default; }
+.crumb-sep { color: var(--muted); padding: 0 1px; }
+
+.file-list li.folder-row {
+  padding: 12px 12px;
+  display: flex; align-items: center; gap: 8px;
+  color: var(--fg);
+}
+.file-list li.folder-row .folder-icon { font-size: 1.05rem; }
+.file-list li.folder-row .folder-meta { color: var(--muted); font-size: .82rem; margin-left: auto; }
+.file-list li.folder-row:active { background: var(--surface); }
 .toc { list-style: none; margin: 0; padding: 0 8px 24px; }
 .toc li { padding: 0; }
 .toc a {

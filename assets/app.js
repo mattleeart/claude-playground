@@ -1364,32 +1364,39 @@ function initViewer() {
     } catch (e) { toast("공유 저장 실패: " + e.message); }
   }
 
+  function validNameOrFolder(n) {
+    return /^[\w가-힣 .,_/-]+$/.test(n) && !n.startsWith("/") && !n.endsWith("/") && !n.includes("..") && !n.includes("//");
+  }
   async function newDoc() {
-    let name = prompt("새 문서 파일명 (예: notes.md)", "");
-    if (!name) return;
-    name = name.trim();
-    if (!/^[\w가-힣 .,_-]+$/.test(name)) { toast("파일명에 사용할 수 없는 문자가 있습니다"); return; }
-    if (!/\.md$/i.test(name)) name += ".md";
-    if (files.some((f) => f.name === name)) { toast("이미 존재하는 파일명입니다"); return; }
+    const ctx = currentFolder ? `현재 폴더: /${currentFolder}\n` : "";
+    let input = prompt(ctx + "새 문서 파일명 (하위 폴더는 / 로 구분, 예: notes.md 또는 메모/오늘.md)", "");
+    if (!input) return;
+    input = input.trim();
+    if (!validNameOrFolder(input)) { toast("파일명에 사용할 수 없는 문자/패턴이 있습니다"); return; }
+    if (!/\.md$/i.test(input)) input += ".md";
+    // place relative to currentFolder unless input itself starts with a folder containing /
+    const fullName = currentFolder ? currentFolder + "/" + input : input;
+    if (files.some((f) => f.name === fullName)) { toast("이미 존재하는 파일명입니다"); return; }
     if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰을 먼저 입력하세요"); return; }
-    const title = name.replace(/\.md$/i, "");
+    const title = input.replace(/\.md$/i, "").split("/").pop();
     const today = new Date().toISOString().slice(0, 10);
     const tpl = "---\ndate: " + today + "\n---\n\n# " + title + "\n\n";
     try {
-      const { sha } = await ghPut("content/" + name, tpl, null, "docs: add " + name);
-      const f = { name, path: "content/" + name, title, size: tpl.length };
+      const { sha } = await ghPut("content/" + fullName, tpl, null, "docs: add " + fullName);
+      const f = { name: fullName, path: "content/" + fullName, title, size: tpl.length };
       files.push(f); files.sort((a, b) => a.name.localeCompare(b.name));
+      currentFolder = folderOf(fullName);
       buildList();
-      currentDoc = name;
+      currentDoc = fullName;
       titleEl.textContent = title;
       document.body.classList.add("editing");
       editorEl.hidden = false; content.hidden = true;
-      editingState = { name, path: f.path, sha, original: tpl };
+      editingState = { name: fullName, path: f.path, sha, original: tpl };
       editorTextarea.value = tpl;
       setEditorStatus("새 문서 생성됨. 편집 후 저장하세요.", "ok");
       closeDrawer();
       editorTextarea.focus();
-      lsSet(LAST_KEY, name);
+      lsSet(LAST_KEY, fullName);
     } catch (e) { toast("생성 실패: " + e.message); }
   }
   document.getElementById("new-doc").addEventListener("click", newDoc);
@@ -1400,7 +1407,7 @@ function initViewer() {
     if (!newName) return;
     newName = newName.trim();
     if (newName === editingState.name) return;
-    if (!/^[\w가-힣 .,_-]+$/.test(newName)) { toast("파일명에 사용할 수 없는 문자가 있습니다"); return; }
+    if (!validNameOrFolder(newName)) { toast("파일명에 사용할 수 없는 문자/패턴이 있습니다"); return; }
     if (!/\.md$/i.test(newName)) newName += ".md";
     if (files.some((f) => f.name === newName)) { toast("이미 존재하는 파일명입니다"); return; }
     if (!getToken()) { setTimeout(() => { settings.hidden = false; tokenInput.focus(); }, 0); toast("토큰이 필요합니다"); return; }
@@ -1414,7 +1421,7 @@ function initViewer() {
       await ghDelete(editingState.path, editingState.sha, "docs: remove " + oldName);
       const oldIdx = files.findIndex((f) => f.name === oldName);
       if (oldIdx >= 0) files.splice(oldIdx, 1);
-      const f = { name: newName, path: newPath, title: newName.replace(/\.md$/i, ""), size: text.length };
+      const f = { name: newName, path: newPath, title: newName.replace(/\.md$/i, "").split("/").pop(), size: text.length };
       files.push(f); files.sort((a, b) => a.name.localeCompare(b.name));
       delete docText[oldName]; docText[newName] = text;
       lsSet(DRAFT_PREFIX + oldName, "");
@@ -1425,6 +1432,7 @@ function initViewer() {
       editingState.original = text;
       saveEditBtn.classList.remove("has-changes");
       titleEl.textContent = f.title;
+      currentFolder = folderOf(newName);
       buildList();
       currentDoc = newName;
       history.replaceState(null, "", "#" + encodeURIComponent(newName));
@@ -2063,6 +2071,8 @@ function initViewer() {
       if (tocEmpty) tocEmpty.hidden = false;
     }
     currentDoc = file.name;
+    const newFolder = folderOf(file.name);
+    if (newFolder !== currentFolder) { currentFolder = newFolder; buildList(); }
     lsSet(LAST_KEY, file.name);
     pushRecent(file.name);
     appendRelated();
@@ -2072,6 +2082,46 @@ function initViewer() {
   }
 
   let activeTag = null;
+  let currentFolder = "";
+  function folderOf(name) { const i = name.lastIndexOf("/"); return i < 0 ? "" : name.slice(0, i); }
+  function itemsInFolder(folder, src) {
+    const prefix = folder ? folder + "/" : "";
+    const subSet = new Set();
+    const fs = [];
+    for (const f of src) {
+      if (prefix && !f.name.startsWith(prefix)) continue;
+      const rest = prefix ? f.name.slice(prefix.length) : f.name;
+      if (rest.includes("/")) subSet.add(rest.split("/")[0]);
+      else fs.push(f);
+    }
+    const subfolders = [...subSet].sort((a, b) => a.localeCompare(b)).map((nm) => {
+      const full = prefix ? prefix + nm : nm;
+      const count = src.filter((f) => f.name.startsWith(full + "/")).length;
+      return { name: nm, full, count };
+    });
+    return { subfolders, files: fs };
+  }
+  function renderBreadcrumb(folder) {
+    const el = document.getElementById("breadcrumb"); if (!el) return;
+    el.innerHTML = "";
+    const rootBtn = document.createElement("button");
+    rootBtn.type = "button"; rootBtn.className = "crumb" + (folder ? "" : " current");
+    rootBtn.innerHTML = "📁 루트";
+    if (folder) rootBtn.addEventListener("click", () => { currentFolder = ""; buildList(); });
+    el.appendChild(rootBtn);
+    if (!folder) return;
+    let path = "";
+    folder.split("/").forEach((p, i, arr) => {
+      const sep = document.createElement("span"); sep.className = "crumb-sep"; sep.textContent = "›"; el.appendChild(sep);
+      path = path ? path + "/" + p : p;
+      const last = i === arr.length - 1;
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "crumb" + (last ? " current" : "");
+      btn.textContent = p;
+      if (!last) { const target = path; btn.addEventListener("click", () => { currentFolder = target; buildList(); }); }
+      el.appendChild(btn);
+    });
+  }
   function getRecent() { try { return JSON.parse(lsGet(RECENT_KEY, "[]")) || []; } catch (_) { return []; } }
   function pushRecent(name) {
     const r = getRecent().filter((n) => n !== name);
@@ -2114,40 +2164,62 @@ function initViewer() {
     const rest = arr.filter((f) => !pins.includes(f.name));
     return [...pinned, ...rest];
   }
+  function renderFileLi(f, recent, pins) {
+    const li = document.createElement("li");
+    li.dataset.name = f.name;
+    const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
+    const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
+    const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
+    const tagsHtml = f.tags && f.tags.length
+      ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
+    const rt = f.readingMin ? " · ⏱️" + f.readingMin + "분" : "";
+    const isPinned = pins.includes(f.name);
+    const pinHtml = `<button class="pin-btn${isPinned ? " on" : ""}" data-pin="${escapeHtml(f.name)}" aria-label="${isPinned ? "고정 해제" : "고정"}">${isPinned ? "★" : "☆"}</button>`;
+    // show only the basename when inside a folder
+    const display = activeTag ? f.name : (f.name.split("/").pop());
+    li.innerHTML = `${pinHtml}${escapeHtml(f.title || display)}${recentBadge}<span class="file-sub">${escapeHtml(display)}${kb ? " · " + kb : ""}${rt}</span>${tagsHtml}`;
+    li.addEventListener("click", (ev) => {
+      const pinEl = ev.target.closest(".pin-btn");
+      if (pinEl) { ev.stopPropagation(); togglePin(pinEl.dataset.pin); return; }
+      const tagEl = ev.target.closest(".file-tag");
+      if (tagEl) { ev.stopPropagation(); activeTag = tagEl.dataset.tag; buildList(); return; }
+      openFile(f.name);
+    });
+    return li;
+  }
+
   function buildList() {
     list.innerHTML = "";
+    const bc = document.getElementById("breadcrumb"); if (bc) bc.innerHTML = "";
+    const recent = getRecent();
+    const pins = getPins();
     if (activeTag) {
       const banner = document.createElement("li");
       banner.className = "tag-filter-banner";
       banner.innerHTML = `태그: <strong>#${escapeHtml(activeTag)}</strong> <button class="tag-clear" type="button">전체 보기</button>`;
       banner.querySelector(".tag-clear").addEventListener("click", () => { activeTag = null; buildList(); });
       list.appendChild(banner);
+      sortedFiles().filter((f) => f.tags && f.tags.includes(activeTag))
+        .forEach((f) => list.appendChild(renderFileLi(f, recent, pins)));
+      return;
     }
-    const recent = getRecent();
-    const pins = getPins();
-    sortedFiles()
-      .filter((f) => !activeTag || (f.tags && f.tags.includes(activeTag)))
-      .forEach((f) => {
-        const li = document.createElement("li");
-        li.dataset.name = f.name;
-        const kb = f.size ? (f.size / 1024).toFixed(1) + " KB" : "";
-        const isRecent = recent.length && recent[0] === f.name && f.name !== currentDoc;
-        const recentBadge = isRecent ? ' <span class="recent-badge">최근</span>' : "";
-        const tagsHtml = f.tags && f.tags.length
-          ? `<span class="file-tags">${f.tags.map((t) => `<span class="file-tag" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join("")}</span>` : "";
-        const rt = f.readingMin ? " · ⏱️" + f.readingMin + "분" : "";
-        const isPinned = pins.includes(f.name);
-        const pinHtml = `<button class="pin-btn${isPinned ? " on" : ""}" data-pin="${escapeHtml(f.name)}" aria-label="${isPinned ? "고정 해제" : "고정"}">${isPinned ? "★" : "☆"}</button>`;
-        li.innerHTML = `${pinHtml}${escapeHtml(f.title || f.name)}${recentBadge}<span class="file-sub">${escapeHtml(f.name)}${kb ? " · " + kb : ""}${rt}</span>${tagsHtml}`;
-        li.addEventListener("click", (ev) => {
-          const pinEl = ev.target.closest(".pin-btn");
-          if (pinEl) { ev.stopPropagation(); togglePin(pinEl.dataset.pin); return; }
-          const tagEl = ev.target.closest(".file-tag");
-          if (tagEl) { ev.stopPropagation(); activeTag = tagEl.dataset.tag; buildList(); return; }
-          openFile(f.name);
-        });
-        list.appendChild(li);
-      });
+    renderBreadcrumb(currentFolder);
+    const src = sortedFiles();
+    const { subfolders, files: ff } = itemsInFolder(currentFolder, src);
+    subfolders.forEach((sf) => {
+      const li = document.createElement("li");
+      li.className = "folder-row";
+      li.dataset.folder = sf.full;
+      li.innerHTML = `<span class="folder-icon">📁</span><span class="folder-name">${escapeHtml(sf.name)}</span><span class="folder-meta">${sf.count}개 ›</span>`;
+      li.addEventListener("click", () => { currentFolder = sf.full; buildList(); });
+      list.appendChild(li);
+    });
+    ff.forEach((f) => list.appendChild(renderFileLi(f, recent, pins)));
+    if (!subfolders.length && !ff.length) {
+      const empty = document.createElement("li");
+      empty.className = "no-hit"; empty.textContent = "이 폴더에는 문서가 없습니다.";
+      list.appendChild(empty);
+    }
   }
 
   const sortSelect = document.getElementById("sort-select");

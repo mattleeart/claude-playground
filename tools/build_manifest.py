@@ -33,16 +33,19 @@ def title_for(path: str, fallback: str) -> str:
 def main():
     files = []
     if os.path.isdir(CONTENT_DIR):
-        for name in sorted(os.listdir(CONTENT_DIR)):
-            if not name.lower().endswith(".md"):
-                continue
-            full = os.path.join(CONTENT_DIR, name)
-            files.append({
-                "name": name,
-                "path": f"content/{name}",
-                "title": title_for(full, os.path.splitext(name)[0]),
-                "size": os.path.getsize(full),
-            })
+        for root, _dirs, fnames in os.walk(CONTENT_DIR):
+            for name in sorted(fnames):
+                if not name.lower().endswith(".md"):
+                    continue
+                full = os.path.join(root, name)
+                rel = os.path.relpath(full, CONTENT_DIR).replace(os.sep, "/")
+                files.append({
+                    "name": rel,
+                    "path": f"content/{rel}",
+                    "title": title_for(full, os.path.splitext(name)[0]),
+                    "size": os.path.getsize(full),
+                })
+    files.sort(key=lambda f: f["name"])
 
     with open(MANIFEST, "w", encoding="utf-8") as fh:
         json.dump({"files": files}, fh, ensure_ascii=False, indent=2)
